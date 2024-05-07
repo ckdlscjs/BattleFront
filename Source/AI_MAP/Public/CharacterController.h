@@ -1,0 +1,76 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/PlayerController.h"
+#include "InputActionValue.h"
+#include "CharacterController.generated.h"
+
+/**
+ * 
+ */
+UCLASS()
+class AI_MAP_API ACharacterController : public APlayerController
+{
+	GENERATED_BODY()
+public:
+	virtual void Tick(float DeltaTime) override;
+protected:
+	virtual void BeginPlay() override;
+
+	virtual void SetupInputComponent() override;
+
+	void Move(const FInputActionValue& Value);
+	void CameraDetachState();
+	void CameraMove(const FInputActionValue& Value);
+	void CameraRotation(const FInputActionValue& Value);
+	void CharacterAction(const FInputActionValue& Value);
+	void SaveCameraRotation();
+	void EdgeCameraMove();
+	void CameraRotationReset(const FInputActionValue& Value);
+	void AbilityChoose(const FInputActionValue& Value);
+	FVector GetHitResultLoc();
+
+	/*Test Code*/
+	void LevelUp(const FInputActionValue& Value);
+	void ExpUp(const FInputActionValue& Value);
+	/******************************************/
+private:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	class UInputMappingContext* DefaultMappingContext;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	class  UInputAction* MoveAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction* ChangeDetachState;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction* CameraMoveAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction* CameraRotationAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction* AttackAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction* CameraReset; // Rotation Reset
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+		class  UInputAction* AbilityChooseAction;
+	UPROPERTY(EditAnywhere, Category = "Combat")
+		TSubclassOf<class AProjectile> ProjectileClass;
+	UPROPERTY()
+		FVector AimVector;
+
+
+	// Test Code
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+		class  UInputAction* LevelUpAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+		class  UInputAction* ExpUpAction;
+	/*****************************************/
+	UPROPERTY()
+	class AGameCharacter* GameCharacter;
+	UPROPERTY()
+	bool bDetachState;
+	UPROPERTY()
+	float CameraSpeed;
+
+	FRotator Look;
+};
