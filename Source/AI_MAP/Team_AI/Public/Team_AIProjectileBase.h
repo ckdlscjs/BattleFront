@@ -10,8 +10,8 @@ UCLASS()
 class AI_MAP_API ATeam_AIProjectileBase : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
 	ATeam_AIProjectileBase();
 	// Called every frame
@@ -27,17 +27,17 @@ protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float Damage;
+	float Damage;
 private:
 	UFUNCTION()
-		void OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()
-		void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 	UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true))
-		UStaticMeshComponent* ProjectileMesh;
+	UStaticMeshComponent* ProjectileMesh;
 	UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true))
-		class USphereComponent* SphereCollision;
+	class USphereComponent* SphereCollision;
 	UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true))
-		class UProjectileMovementComponent* ProjectileMovementComponent;
-	
+	class UProjectileMovementComponent* ProjectileMovementComponent;
+
 };

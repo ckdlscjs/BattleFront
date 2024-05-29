@@ -18,6 +18,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	UFUNCTION(BlueprintCallable)
 	virtual class ATeam_AICharacterBase* SpawnActor();
+	virtual class ATeam_AICharacter_Recv* RecvedSpawnActor();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -29,5 +31,8 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<class ATeam_AICharacterBase> EnemyClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<class ATeam_AICharacterBase> AIClassRecv;
 private:
+
 };

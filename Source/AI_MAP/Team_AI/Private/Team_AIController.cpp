@@ -20,7 +20,7 @@ const FName ATeam_AIController::TargetKey(TEXT("Target"));
 const FName ATeam_AIController::TargetInRangeKey(TEXT("TargetInRange"));
 const FName ATeam_AIController::StateKey(TEXT("State"));
 const FName ATeam_AIController::AttackDelayKey(TEXT("AttackDelay"));
-const FName ATeam_AIController::AttackAvailableKey(TEXT("AttackAvailable"));
+//const FName ATeam_AIController::AttackAvailableKey(TEXT("AttackAvailable"));
 
 
 ATeam_AIController::ATeam_AIController()
@@ -45,10 +45,10 @@ ATeam_AIController::ATeam_AIController()
 
 	SenseSight->SightRadius = 500.0f;
 	SenseSight->LoseSightRadius = 1000.0f;
-	SenseSight->PeripheralVisionAngleDegrees = 60.0f; // ÁÖº¯ ½Ã¾ß°¢
-	SenseSight->DetectionByAffiliation.bDetectEnemies = true; // ¼Ò¼Óº° Å½Áö Àû
-	SenseSight->DetectionByAffiliation.bDetectFriendlies = true; // ¼Ò¼Óº° Å½Áö ÆÀ
-	SenseSight->DetectionByAffiliation.bDetectNeutrals = true; // ¼Ò¼Óº° Å½Áö Áß¸³
+	SenseSight->PeripheralVisionAngleDegrees = 60.0f; // ï¿½Öºï¿½ ï¿½Ã¾ß°ï¿½
+	SenseSight->DetectionByAffiliation.bDetectEnemies = true; // ï¿½Ò¼Óºï¿½ Å½ï¿½ï¿½ ï¿½ï¿½
+	SenseSight->DetectionByAffiliation.bDetectFriendlies = true; // ï¿½Ò¼Óºï¿½ Å½ï¿½ï¿½ ï¿½ï¿½
+	SenseSight->DetectionByAffiliation.bDetectNeutrals = true; // ï¿½Ò¼Óºï¿½ Å½ï¿½ï¿½ ï¿½ß¸ï¿½
 	SenseSight->SetMaxAge(1.0f);
 	PerceptionComponent->ConfigureSense(*SenseSight);
 
@@ -63,7 +63,7 @@ void ATeam_AIController::OnAIMoveComplete(FAIRequestID RequestID, EPathFollowing
 	ATeam_AICharacterBase* AICharacter = Cast<ATeam_AICharacterBase>(GetPawn());
 	if (!AICharacter)
 		return;
-	// ÀÌµ¿ ¿Ï·á ½Ã Behavior TreeÀÇ »óÅÂ¸¦ ¾÷µ¥ÀÌÆ®
+	// ï¿½Ìµï¿½ ï¿½Ï·ï¿½ ï¿½ï¿½ Behavior Treeï¿½ï¿½ ï¿½ï¿½ï¿½Â¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
 	UBehaviorTreeComponent* BehaviorTree = Cast<UBehaviorTreeComponent>(GetBrainComponent());
 	if (!BehaviorTree)
 		return;
@@ -114,7 +114,7 @@ void ATeam_AIController::OnPossess(APawn* InPawn)
 	{
 		Blackboard->SetValueAsVector(SpawnPosKey, AICharacter->GetActorLocation());
 		Blackboard->SetValueAsFloat(AttackDelayKey, AICharacter->GetAttackDelay());
-		Blackboard->SetValueAsBool(AttackAvailableKey, true);
+		//Blackboard->SetValueAsBool(AttackAvailableKey, true);
 
 		if (!RunBehaviorTree(BT_Asset))
 		{
@@ -134,9 +134,11 @@ void ATeam_AIController::OnTargetDetect()
 {
 	if ((ECharacterState)Blackboard->GetValueAsEnum(ATeam_AIController::StateKey) != ECharacterState::ATTACK)
 		return;
-	if (!Blackboard->GetValueAsObject(ATeam_AIController::TargetKey))
-		return;
 	ATeam_AICharacterBase* AICharacter = Cast<ATeam_AICharacterBase>(GetPawn());
+	if (!AICharacter)
+		return;
+	AActor* Target = Cast<AActor>(Blackboard->GetValueAsObject(ATeam_AIController::TargetKey));
+
 	TArray<FOverlapResult> OverlapResults;
 	FCollisionQueryParams CollisionQueryParam(NAME_None, false, AICharacter);
 	GetWorld()->OverlapMultiByProfile(OverlapResults, AICharacter->GetActorLocation(), FQuat::Identity, FName("PlayerCheck"), FCollisionShape::MakeSphere(AICharacter->GetDetectRadius()), CollisionQueryParam);
@@ -146,16 +148,25 @@ void ATeam_AIController::OnTargetDetect()
 		{
 			if (iter.GetActor()->ActorHasTag(AICharacter->GetTargetTag()))
 			{
+				if (iter.GetActor() != Target)
+					continue;
 				if (AICharacter->GetDistanceTo(iter.GetActor()) >= SenseSight->SightRadius)
 				{
+					//UKismetSystemLibrary::PrintString(GetWorld(), FString(iter.GetActor()->GetActorNameOrLabel()), true, false);
 					Blackboard->SetValueAsObject(ATeam_AIController::TargetKey, nullptr);
 					Blackboard->SetValueAsEnum(ATeam_AIController::StateKey, (uint8)ECharacterState::IDLE);
-					//UKismetSystemLibrary::PrintString(GetWorld(), FString(iter.GetActor()->GetActorNameOrLabel()), true, false);
 					DrawDebugLine(GetWorld(), AICharacter->GetActorLocation(), iter.GetActor()->GetActorLocation(), FColor::Red, false, 0.3f);
 					DrawDebugSphere(GetWorld(), AICharacter->GetActorLocation(), AICharacter->GetDetectRadius(), 16, FColor::Blue, false, 1.0f);
 				}
 			}
 		}
+	}
+	else
+	{
+		//UKismetSystemLibrary::PrintString(GetWorld(), FString(iter.GetActor()->GetActorNameOrLabel()), true, false);
+		Blackboard->SetValueAsObject(ATeam_AIController::TargetKey, nullptr);
+		Blackboard->SetValueAsEnum(ATeam_AIController::StateKey, (uint8)ECharacterState::IDLE);
+		DrawDebugSphere(GetWorld(), AICharacter->GetActorLocation(), AICharacter->GetDetectRadius(), 16, FColor::Blue, false, 1.0f);
 	}
 }
 
@@ -175,10 +186,14 @@ void ATeam_AIController::OnSensed(const TArray<AActor*>& UpdatedActors)
 		for (const auto& sense : PerceptionInfo.LastSensedStimuli)
 		{
 			if (UAISense_Sight::StaticClass() == UAIPerceptionSystem::GetSenseClassForStimulus(GetWorld(), sense))
-				Blackboard->SetValueAsObject(TargetKey, actor);
+			{
+				auto Target = Cast<AActor>(Blackboard->GetValueAsObject(TargetKey));
+				Target = !Target ? actor : (AICharacter->GetDistanceTo(actor) < AICharacter->GetDistanceTo(Target)) ? actor : Target;
+				Blackboard->SetValueAsObject(TargetKey, Target);
+			}
+
 			if (UAISense_Damage::StaticClass() == UAIPerceptionSystem::GetSenseClassForStimulus(GetWorld(), sense))
 				Blackboard->SetValueAsObject(TargetKey, actor);
 		}
 	}
-	
 }

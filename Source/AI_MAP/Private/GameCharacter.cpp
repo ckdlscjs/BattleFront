@@ -19,6 +19,11 @@
 #include "Weapon_Pistol.h"
 #include "AbilityManager.h"
 #include "AbilityBomb.h"
+#include "NetworkManager.h"
+#include "CharacterAnimInstance.h"
+#include "Team_AIGameMode.h"
+#include "Kismet/GameplayStatics.h"
+#include "AI_MAP.h"
 
 // Sets default values
 AGameCharacter::AGameCharacter()
@@ -35,22 +40,42 @@ AGameCharacter::AGameCharacter()
 	
 	/*SpawnBound = CreateDefaultSubobject<USphereComponent>(TEXT("Spawn Bound"));
 	SpawnBound->SetupAttachment(RootComponent);*/
-	RecognizeRange = CreateDefaultSubobject<UBoxComponent>(TEXT("Recognize Range"));
-	RecognizeRange->SetupAttachment(RootComponent);
 
+	RecognizeVisibility = CreateDefaultSubobject<USphereComponent>(TEXT("Recognize Visibility"));
+	RecognizeVisibility->SetupAttachment(RootComponent);
+
+
+	AbilitySpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("AbilitySpawnPoint"));
+	AbilitySpawnPoint->SetupAttachment(GetMesh());
 	//SpawnPoint = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Spawn Point"));
 	//SpawnPoint->SetupAttachment(SpawnBound);
 
 	MaxNum = 5;
 	CoolTimeToNormal = 15.f;
 	Time = CoolTimeToNormal;
+
+	PlayerInfo = new Protocol::PosInfo();
+	DestInfo = new Protocol::PosInfo();
+	GuardPoint = 0.f;
+}
+
+AGameCharacter::~AGameCharacter()
+{
+	delete PlayerInfo;
+	delete DestInfo;
+	PlayerInfo = nullptr;
+	DestInfo = nullptr;
 }
 
 // Called when the game starts or when spawned
 void AGameCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	SetLineOfSight();//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½ ï¿½ï¿½ï¿½ï¿½
+	auto MyGameMode = Cast<ATeam_AIGameMode>(GetWorld()->GetAuthGameMode());
+	AbilityManager = MyGameMode->GetAbilityManager();
+	AbilityManager->SetOwner(this);
+	FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::SnapToTarget, true);
+	AbilityManager->AttachToComponent(AbilitySpawnPoint,Rules);
 	PrevCameraRotaion = SpringArmComp->GetComponentRotation();
 
 	if (IsValid(MainHUDWidgetClass))
@@ -62,16 +87,14 @@ void AGameCharacter::BeginPlay()
 			MainHUD->AddToViewport();
 		}
 	}
-	CharacterStat.Level = 1;
-	SetNewLevel(CharacterStat.Level);
+
 	AttachWeapon();
 	bDead = false;
 	bFight = false;
-	Manager = NewObject<AAbilityManager>();
-	Bomd = NewObject<AAbilityBomb>();
-	Bomd->SetOwner(this);
-	Manager->AbilityArray.Add(Bomd);
 	
+
+	CharacterStat.Level = 1;
+	SetNewLevel(CharacterStat.Level);
 }
 
 
@@ -87,33 +110,101 @@ void AGameCharacter::Tick(float DeltaTime)
 			bFight = false;
 			Time = CoolTimeToNormal;
 		}
-	}
-	FVector MyLoc = GetActorLocation();
-	
-	//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Actor X : %f , Y : %f , Z : %f"), MyLoc.X, MyLoc.Y, MyLoc.Z));
-	FVector Loc;
-	Manager->Attack(Loc);
 
-	//CheckExp(CharacterStat.CurrExp); // ÃßÈÄ ÀÌº¥Æ® Çü½ÄÀ¸·Î ¹Ù²Ù°í ½Í´Ù...
+	}
+	AbilityManager->Attack();
+
+		///CheckExp(CharacterStat.CurrExp); // ï¿½ï¿½ï¿½ï¿½ ï¿½Ìºï¿½Æ® ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù²Ù°ï¿½ ï¿½Í´ï¿½...
+
+	//Add Server
+	auto NetManager = GetGameInstance()->GetSubsystem<UNetworkManager>();
+	//if (NetManager->MyPlayer != this)
+	auto gm = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (gm->GetMyPlayer() != this)
+	{
+		const Protocol::MoveState State = PlayerInfo->state();
+
+		if (State == Protocol::MOVE_STATE_RUN)
+		{
+			FVector loc(DestInfo->x(), DestInfo->y(), DestInfo->z());
+			FRotator rot(0, DestInfo->yaw(), 0);
+			//FVector vel(DestInfo->vx(), DestInfo->vy(), DestInfo->vz());
+			//speed = vel.Size();
+			//UCharacterAnimInstance* CA = Cast<UCharacterAnimInstance>(GetMesh()->GetAnimInstance());
+			//this->GetVelocity().Size();
+			
+			//AddMovementInput(vel);
+			speed = DestInfo->speed();
+			SetActorRotation(rot);
+			SetActorLocation(loc);
+		}
+		else
+		{
+			speed = 0.0f;
+		}
+		bReceived = false;
+		AimYaw = DestInfo->aimyaw();
+	}
 }
 
 void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigateBy, AActor* DamageCauser)
 {
-	CharacterStat.CurrHP -= Damage;	
-	if (CharacterStat.CurrHP <= 0.f)
+	if (this == DamageCauser->GetOwner())
 	{
-		//Player Die Event;
-		bDead = true;
+		return;
 	}
-	MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	//FString name = GetActorNameOrLabel();//
+	//FString da = FString::SanitizeFloat(Damage);//
+	//FString test = name +" " + da;//
+	//UKismetSystemLibrary::PrintString(GetWorld(),test
+	if (GetNetworkManager()->GameMode->GetMyPlayer()->PlayerInfo->object_id() == 1)
+	{
+		if (GuardPoint >= 0.f)
+		{
+			GuardPoint -= Damage;
+		}
+		else
+		{
+			CharacterStat.CurrHP -= Damage;
+			//TODO : Damaged Packet(Object_id, Updated HP)
+			Protocol::C_DAMAGED dmgedPkt;
+			{
+				dmgedPkt.set_object_id(PlayerInfo->object_id());
+				dmgedPkt.set_hp(CharacterStat.CurrHP);
+
+				GetNetworkManager()->SendPacket(dmgedPkt);
+			}
+		}
+		if (CharacterStat.CurrHP <= 0.f)
+		{
+			//Player Die Event;
+			bDead = true;
+
+			// TODO : Dead Packet(Object_id, dead bool)
+			Protocol::C_PLAYERDEAD playerDeadPkt;
+			{
+				playerDeadPkt.set_object_id(PlayerInfo->object_id());
+				playerDeadPkt.set_dead(bDead);
+				GetNetworkManager()->SendPacket(playerDeadPkt);
+			}
+			auto gm = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+			int64 WinnerID = gm->WinnerCheck();
+			if (WinnerID)
+			{
+				// TODO : What object to send?
+
+			}
+		}
+		
+		MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	}
 }
+
 // Called to bind functionality to input
 void AGameCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent);
-
-
 }
 void AGameCharacter::PostInitializeComponents()
 {
@@ -176,6 +267,10 @@ void AGameCharacter::SetNewLevel(int32 NewLevel)
 	{
 		return;
 	}
+	if (GameInstance->GetCharacterRowData(NewLevel) == nullptr)
+	{
+		return;
+	}
 	CharacterStat.Level = NewLevel;
 	CharacterStat.MaxHP = GameInstance->GetCharacterRowData(NewLevel)->MaxHP;
 	CharacterStat.NextExp = GameInstance->GetCharacterRowData(NewLevel)->NextExp;
@@ -193,8 +288,6 @@ void AGameCharacter::SetNewLevel(int32 NewLevel)
 	CharacterStat.Armor = GameInstance->GetCharacterRowData(NewLevel)->Armor;
 	CharacterStat.Speed = GameInstance->GetCharacterRowData(NewLevel)->Speed;
 	CharacterStat.DropExp = GameInstance->GetCharacterRowData(NewLevel)->DropExp;
-	//float test1 = GameInstance->GetCharacterRowData(NewLevel)->Ability;
-	//float test2 = GameInstance->GetCharacterRowData(NewLevel)->Percentage;
 	
 	MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
 	SetRandomTextureArray();
@@ -213,10 +306,15 @@ const bool AGameCharacter::IsDead()
 
 void AGameCharacter::SetAbility(int32 Index)
 {
-	bool bFind = FindAbility(Index);
+
+	bool bFind = AbilityManager->FindAbility(Index);
+	int32 FindLevel = 0;
+	int32 FindIndex = 0;
+	//AbilityManager->SetAbility(Index, bFind, FindIndex, FindLevel);
 	if (bFind == false)
 	{
-		if (SkillArray.Num() >= 5)
+		AbilityManager->SetNewAbility();
+		/*if (SkillArray.Num() >= 5)
 		{
 			return;
 		}
@@ -224,26 +322,23 @@ void AGameCharacter::SetAbility(int32 Index)
 		FSkillData SkillData;
 		SkillData.Index = SkillIndex;
 		SkillData.Level = 0;
-		SkillArray.Add(SkillData.Index, SkillData.Level);
-		MainHUD->UpdateSkillImage(SelectedAbility, SkillData.Index);
-		MainHUD->UpdateSkillLevel(SkillData.Index, SkillData.Level);
-		SkillIndex++;
-		
+		SkillArray.Add(SkillData.Index, SkillData.Level);*/
+		MainHUD->UpdateSkillImage(AbilityManager->GetSelectedTexture(), AbilityManager->GetSelectedIndex());
+		MainHUD->UpdateSkillLevel(AbilityManager->GetSelectedIndex(), 0);
 	}
 	else if (bFind == true)
 	{
-		int32 FindIndex = AbilityMap.FindRef(SelectedAbility);
-		int32& FindLevel = SkillArray[FindIndex];
-		FindLevel += 1;
+		AbilityManager->AbilityLevelUp(FindIndex, FindLevel);
 		MainHUD->UpdateSkillLevel(FindIndex, FindLevel);
 	}
-	RandomTexture.Empty();
+	AbilityManager->ClearRandomArray();
 	MainHUD->HideChooseSkill();
 }
 
 void AGameCharacter::AttachWeapon()
 {
-	Weapon = GetWorld()->SpawnActor<AWeapon>(WeaponClass,FVector::ZeroVector, FRotator::ZeroRotator);
+	//Weapon = GetWorld()->SpawnActor<AWeapon>(WeaponClass,FVector::ZeroVector, FRotator::ZeroRotator);
+	Weapon = GetWorld()->SpawnActor<AWeapon>(WeaponClass, GetActorLocation(), GetActorRotation());
 	if (Weapon != nullptr)
 	{
 		FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::KeepRelative, false);
@@ -272,6 +367,21 @@ void AGameCharacter::SetCharacterMovementRotation(bool bState)
 void AGameCharacter::Fire()
 {
 	Weapon->Shot();
+}
+
+void AGameCharacter::UpdateHpWiget()
+{
+	MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+}
+
+void AGameCharacter::SetGuardPoint(float Guard)
+{
+	GuardPoint = Guard;
+}
+
+AWeapon* AGameCharacter::GetMyWeapon() const
+{
+	return Weapon;
 }
 
 void AGameCharacter::ExpUp(float Exp)
@@ -319,10 +429,22 @@ float AGameCharacter::GetAimYaw()
 	return AimYaw;
 }
 
+float& AGameCharacter::GetCurrentHP()
+{
+	
+	return CharacterStat.CurrHP;
+}
+
+float AGameCharacter::GetCurrentMaxHp()
+{
+	return CharacterStat.MaxHP;
+}
+
 void AGameCharacter::SetRandomTextureArray()
 {
 	MainHUD->ShowChooseSkill();
-	if (SkillArray.Num() < 5)
+	AbilityManager->SetRandomIndex();
+	/*if (SkillArray.Num() < 5)
 	{
 		while (RandomTexture.Num() < 3)
 		{
@@ -358,6 +480,70 @@ void AGameCharacter::SetRandomTextureArray()
 			RandomTexture = Buff;
 			
 		}		
+	}*/
+	MainHUD->SetChooseSkillImage(AbilityManager->GetRandTextureArray());
+}
+
+bool AGameCharacter::IsMyPlayer()
+{
+	return Cast<AGameCharacter>(this) != nullptr;
+}
+
+void AGameCharacter::SetMoveState(Protocol::MoveState State)
+{
+	if (PlayerInfo->state() == State)
+		return;
+
+	PlayerInfo->set_state(State);
+
+	// TODO
+}
+
+void AGameCharacter::SetPlayerInfo(const Protocol::PosInfo& Info)
+{
+	if (PlayerInfo->object_id() != 0)
+	{
+		assert(PlayerInfo->object_id() == Info.object_id());
 	}
-	MainHUD->SetChooseSkillImage(RandomTexture);
+
+	PlayerInfo->CopyFrom(Info);
+
+	FVector Location(Info.x(), Info.y(), Info.z());
+	FRotator Rotation(Info.pitch(), Info.yaw(), Info.roll());
+	SetActorLocation(Location);
+	SetActorRotation(Rotation);
+}
+
+void AGameCharacter::SetDestInfo(const Protocol::PosInfo& Info)
+{
+	if (PlayerInfo->object_id() != 0)
+	{
+		assert(PlayerInfo->object_id() == Info.object_id());
+	}
+
+	DestInfo->CopyFrom(Info);
+
+	SetMoveState(Info.state());
+	bReceived = true;
+}
+
+AWeapon* AGameCharacter::GetWeapon()
+{
+	return Weapon;
+}
+
+UNetworkManager* AGameCharacter::GetNetworkManager() const
+{
+	return GetGameInstance()->GetSubsystem<UNetworkManager>();
+}
+
+void AGameCharacter::UpdateHP(float hp)
+{
+	CharacterStat.CurrHP = hp;
+	MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+}
+
+void AGameCharacter::SetDead(bool dead)
+{
+	bDead = dead;
 }

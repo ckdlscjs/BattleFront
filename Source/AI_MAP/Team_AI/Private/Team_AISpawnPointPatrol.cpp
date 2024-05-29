@@ -5,7 +5,7 @@
 #include "Team_AIPatrolRoute.h"
 #include "Team_AIGameMode.h"
 #include "Team_AICharacterBase.h"
-
+#include "Components/SkeletalMeshComponent.h"
 ATeam_AISpawnPointPatrol::ATeam_AISpawnPointPatrol()
 {
 }
@@ -24,6 +24,7 @@ ATeam_AICharacterBase* ATeam_AISpawnPointPatrol::SpawnActor()
 {
 	//TODO : Random Enemy
 	PatrolActor = Cast<ATeam_AICharacterBase>(Super::SpawnActor());
+	//send to packet
 	if(PatrolActor)
 		PatrolActor->SetPatrolRoute(PatrolRoute);
 	return PatrolActor;

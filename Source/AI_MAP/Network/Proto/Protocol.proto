@@ -11,19 +11,15 @@ message C_LOGIN
 
 message S_LOGIN
 {
-	//bool success = 1;
-	//repeated ObjectInfo players = 2;
 }
 
 message C_ENTER_GAME
 {
-	//uint64 playerIndex = 1;
 }
 
 message S_ENTER_GAME
 {
-	//bool success = 1;
-	//ObjectInfo player = 2;
+	ObjectInfo player = 1;
 }
 
 message C_LEAVE_GAME
@@ -38,22 +34,22 @@ message S_LEAVE_GAME
 
 message S_SPAWN
 {
-	//repeated ObjectInfo players = 1;
+	repeated ObjectInfo players = 1;
 }
 
 message S_DESPAWN
 {
-	//repeated uint64 object_ids = 1;
+	repeated uint64 object_ids = 1;
 }
 
 message C_MOVE
 {
-	//PosInfo info = 1;
+	PosInfo info = 1;
 }
 
 message S_MOVE
 {
-	//PosInfo info = 1;
+	PosInfo info = 1;
 }
 
 message C_CHAT
@@ -65,4 +61,202 @@ message S_CHAT
 {
 	uint64 playerId = 1;
 	string msg = 2;
+}
+
+message C_FIRE
+{
+	ProjectileInfo projectile = 1;
+}
+
+message S_FIRE
+{
+	ProjectileInfo projectile = 1;
+}
+
+message C_HIT
+{
+	uint64 ownerId = 1;
+	uint64 targetId = 2;
+	float damage = 3;
+}
+
+message S_HIT
+{
+	uint64 ownerId = 1;
+	uint64 targetId = 2;
+	float damage = 3;
+}
+
+message C_AISPAWNRANDOM
+{
+	uint64 object_id = 1;
+	float x = 2;
+	float y = 3;
+	float z = 4;
+	float yaw = 5;
+	float pitch = 6;
+	float roll = 7;
+	uint64 container_Idx = 8;
+}
+
+message S_AISPAWNRANDOM
+{
+	uint64 object_id = 1;
+	float x = 2;
+	float y = 3;
+	float z = 4;
+	float yaw = 5;
+	float pitch = 6;
+	float roll = 7;
+	uint64 container_Idx = 8;
+}
+
+message C_AISPAWNPATROL
+{
+	repeated ObjectInfo enemies = 1;
+}
+
+message S_AISPAWNPATROL
+{
+	repeated ObjectInfo enemies = 1;
+}
+
+message S_AIMOVE
+{
+	PosInfo info = 1;
+}
+
+message C_AIMOVE
+{
+	PosInfo info = 1;
+}
+
+message S_AIMOVESTOP
+{
+	uint64 object_id = 1;
+	float speed = 2;
+}
+
+message C_AIMOVESTOP
+{
+	uint64 object_id = 1;
+	float speed = 2;
+}
+
+message S_AIATTACK
+{
+	uint64 object_id = 1;
+}
+
+message C_AIATTACK
+{
+	uint64 object_id = 1;
+}
+
+message S_AIROTATE
+{
+	uint64 object_id = 1;
+	float yaw = 2;
+	float pitch = 3;
+	float roll = 4;
+	float x = 5;
+	float y = 6;
+	float z = 7;
+}
+
+message C_AIROTATE
+{
+	uint64 object_id = 1;
+	float yaw = 2;
+	float pitch = 3;
+	float roll = 4;
+	float x = 5;
+	float y = 6;
+	float z = 7;
+}
+
+message S_AIHIT
+{
+	uint64 object_id = 1;
+}
+
+message C_AIHIT
+{
+	uint64 object_id = 1;
+}
+
+message S_DAMAGED
+{
+	uint64 object_id = 1;
+	float hp = 2;
+}
+
+message C_DAMAGED
+{
+	uint64 object_id = 1;
+	float hp = 2;
+}
+
+message S_AIDAMAGED
+{
+	uint64 object_id = 1;
+	float hp = 2;
+}
+
+message C_AIDAMAGED
+{
+	uint64 object_id = 1;
+	float hp = 2;
+}
+
+message S_AIDEAD
+{
+	uint64 object_id = 1;
+	bool dead = 2;
+}
+
+message C_AIDEAD
+{
+	uint64 object_id = 1;
+	bool dead = 2;
+}
+
+message S_PLAYERDEAD
+{
+	uint64 object_id = 1;
+	bool dead = 2;
+}
+
+message C_PLAYERDEAD
+{
+	uint64 object_id = 1;
+	bool dead = 2;
+}
+
+message S_AIPROJSPAWN
+{
+	uint64 object_id = 1;
+	int64 ProjIdx = 2;
+	float x = 3;
+	float y = 4;
+	float z = 5;
+	float yaw = 6;
+	float pitch = 7;
+	float roll = 8;
+	float speed = 9;
+	float attackDmg = 10;
+}
+
+message C_AIPROJSPAWN
+{
+	uint64 object_id = 1;
+	int64 ProjIdx = 2;
+	float x = 3;
+	float y = 4;
+	float z = 5;
+	float yaw = 6;
+	float pitch = 7;
+	float roll = 8;
+	float speed = 9;
+	float attackDmg = 10;
 }

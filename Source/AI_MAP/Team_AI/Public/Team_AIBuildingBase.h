@@ -15,6 +15,8 @@ public:
 	// Sets default values for this actor's properties
 	ATeam_AIBuildingBase();
 
+	virtual void PostInitializeComponents() override;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -25,9 +27,12 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 		class UBoxComponent* CollisionBox;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-		UStaticMeshComponent* Roof;
-
+	//UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	//	UStaticMeshComponent* Roof;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TArray<UStaticMeshComponent*> Roofs;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//	TArray<class UBoxComponent*> CollisionBoxes;
 private:
 	UFUNCTION()
 		void ActorBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);

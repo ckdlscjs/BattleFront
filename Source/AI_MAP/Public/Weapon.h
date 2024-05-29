@@ -27,6 +27,8 @@ public:
 	UFUNCTION()
 	virtual void SetDamage(float Damage);
 	virtual void Shot();
+	FVector GetSpawnPointLocation();
+	FVector GetSpawnPointForwardVec();
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = true))
@@ -37,4 +39,8 @@ protected:
 		USceneComponent* ProjectileSpawnPoint;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bullet", meta = (AllowPrivateAccess = true))
 		TSubclassOf<class AProjectile> ProjectileClass;
+
+public:
+	class UNetworkManager* GetNetworkManager() const;
+	TSubclassOf<class AProjectile> GetPrjClass();
 };

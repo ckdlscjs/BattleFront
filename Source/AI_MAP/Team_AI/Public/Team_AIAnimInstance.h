@@ -10,6 +10,7 @@ DECLARE_MULTICAST_DELEGATE(FOnAttackEndCheckDelegate);
 
 DECLARE_MULTICAST_DELEGATE(FOnAttackMontageEndCheckDelegate);
 DECLARE_MULTICAST_DELEGATE(FOnDeadCheckDelegate);
+DECLARE_MULTICAST_DELEGATE(FOnAttackParticleCheckDelegate);
 /**
  * 
  */
@@ -21,12 +22,14 @@ class AI_MAP_API UTeam_AIAnimInstance : public UAnimInstance
 public:
 	UTeam_AIAnimInstance();
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
-	float PlayAttackMontage(float PlayRate = 1.0f);
+	float PlayAttackMontage(float PlayRate = 1.0, int idx = 0);
 	float PlayDeadMontage(float PlayRate = 1.0f);
 	UFUNCTION(BlueprintCallable)
 	bool GetAttacking() const;
 	UFUNCTION(BlueprintCallable)
 	bool GetDead() const;
+	
+	uint64 GetAttackMontagesSize() const;
 protected:
 
 private:
@@ -34,29 +37,34 @@ private:
 	void AnimNotify_AttackStartCheck();
 	UFUNCTION()
 	void AnimNotify_AttackEndCheck();
-
 	UFUNCTION()
 	void AnimNotify_AttackMontageEndCheck();
 	UFUNCTION()
 	void AnimNotify_DeadCheck();
+
+	UFUNCTION()
+	void AnimNotify_AttackParticleCheck();
 
 public:
 	FOnAttackStartCheckDelegate OnAttackStart;
 	FOnAttackEndCheckDelegate OnAttackEnd;
 	FOnAttackMontageEndCheckDelegate OnAttackMontageEnd;
 	FOnDeadCheckDelegate OnDead;
+	FOnAttackParticleCheckDelegate OnAttackParticle;
 protected:
-	
-private:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess = true))
-		float CurrentPawnSpeed;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess = true))
-		UAnimMontage* AttackMontage;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess = true))
-		UAnimMontage* DeadMontage;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess = true))
-		bool IsAttacking;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (AllowPrivateAccess = true))
-		bool IsDead;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float CurrentPawnSpeed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<UAnimMontage*> AttackMontages;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimMontage* DeadMontage;
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<UAnimMontage*> HitMotages;*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool IsAttacking;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool IsDead;
 
+private:
+	
 };

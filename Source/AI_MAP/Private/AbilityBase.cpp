@@ -2,7 +2,8 @@
 
 
 #include "AbilityBase.h"
-#include "GameFramework/ProjectileMovementComponent.h"
+
+#include "Components/CapsuleComponent.h"
 #include "Misc/App.h"
 // Sets default values
 AAbilityBase::AAbilityBase()
@@ -10,30 +11,27 @@ AAbilityBase::AAbilityBase()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
-	RootComponent = StaticMesh;
-	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
-	AbilityLevel = 1;
+	
+	MyAbilityLevel = 0;
 	FireTime = 0.f;
-
 }
 
 // Called when the game starts or when spawned
 void AAbilityBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 }
 
 // Called every frame
 void AAbilityBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	
 }
 
 
-bool AAbilityBase::CheckTime()
+bool AAbilityBase::CheckTime(float DTimer)
 {
 	
 	if (FireTime <= 0.f)
@@ -44,7 +42,7 @@ bool AAbilityBase::CheckTime()
 	else
 	{
 		
-		FireTime -= FApp::GetDeltaTime();
+		FireTime -= DTimer;
 		return false;
 	}
 	return false;
@@ -58,5 +56,30 @@ int32 AAbilityBase::GetProjCount()
 AbilityType AAbilityBase::GetType()
 {
 	return Type;
+}
+
+UTexture2D* AAbilityBase::GetTexture()
+{
+	return AbilityTexture;
+}
+
+void AAbilityBase::SetAbilityLevel(int32 Level)
+{
+	MyAbilityLevel = Level;
+}
+
+int32 AAbilityBase::GetAbilityLevel()
+{
+	return MyAbilityLevel;
+}
+
+FString AAbilityBase::GetAbilityName()
+{
+	return Name;
+}
+
+void AAbilityBase::AbilityLevelUp()
+{
+	MyAbilityLevel++;
 }
 

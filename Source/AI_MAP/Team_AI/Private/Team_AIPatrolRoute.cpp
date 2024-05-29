@@ -50,7 +50,7 @@ void ATeam_AIPatrolRoute::OnCollisionEndOverlap(UPrimitiveComponent* OverlappedC
 	BlackBoard->SetValueAsVector(ATeam_AIController::PatrolPosKey, PatrolRoute->GetLocationAtSplinePoint(0, ESplineCoordinateSpace::World));
 	BlackBoard->SetValueAsObject(ATeam_AIController::TargetKey, nullptr);
 	BlackBoard->SetValueAsBool(ATeam_AIController::TargetInRangeKey, false);
-	BlackBoard->SetValueAsBool(ATeam_AIController::AttackAvailableKey, true);
+	//BlackBoard->SetValueAsBool(ATeam_AIController::AttackAvailableKey, true);
 }
 
 // Called every frame

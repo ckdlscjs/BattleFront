@@ -41,6 +41,7 @@ void UBTTask_AIMoveTo::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMe
     UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
     if (!Blackboard)
         return;
+
     AICharacter->SendTest("MoveTo");
 }
 

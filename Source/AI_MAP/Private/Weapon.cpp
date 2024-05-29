@@ -3,6 +3,10 @@
 
 #include "Weapon.h"
 #include "Projectile.h"
+#include "Kismet/GameplayStatics.h"
+#include "NetworkManager.h"
+#include "GameCharacter.h"
+
 // Sets default values
 AWeapon::AWeapon()
 {
@@ -18,7 +22,6 @@ AWeapon::AWeapon()
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame
@@ -37,11 +40,36 @@ void AWeapon::Shot()
 {
 	FVector Location = ProjectileSpawnPoint->GetComponentLocation();
 	FRotator Rotation = ProjectileSpawnPoint->GetComponentRotation();
-	
+
 	AProjectile* Projectile = GetWorld()->SpawnActor<AProjectile>(ProjectileClass, Location, Rotation);
 	if (!Projectile)
 		return;
 	auto MyOwner = GetOwner();
 	Projectile->SetOwner(MyOwner);
 	Projectile->SetCollisionEnable(true);
+
+	Protocol::C_FIRE firePkt;
+	{
+		AGameCharacter* my = Cast<AGameCharacter>(MyOwner);
+		Protocol::ProjectileInfo* projInfo = firePkt.mutable_projectile();
+		projInfo->set_object_id(my->PlayerInfo->object_id());
+		projInfo->set_x(Location.X);
+		projInfo->set_y(Location.Y);
+		projInfo->set_z(Location.Z);
+		projInfo->set_yaw(Rotation.Yaw);
+		projInfo->set_pitch(Rotation.Pitch);
+		projInfo->set_roll(Rotation.Roll);
+		projInfo->set_bfight(my->IsFight());
+		GetNetworkManager()->SendPacket(firePkt);
+	}
+}
+
+UNetworkManager* AWeapon::GetNetworkManager() const
+{
+	return GetGameInstance()->GetSubsystem<UNetworkManager>();
+}
+
+TSubclassOf<class AProjectile> AWeapon::GetPrjClass()
+{
+	return ProjectileClass;
 }

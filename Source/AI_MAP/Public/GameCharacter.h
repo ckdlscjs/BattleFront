@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Protocol.pb.h"
 #include "GameCharacter.generated.h"
 
 USTRUCT(BlueprintType)
@@ -27,9 +28,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		float NextExp;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		float CurrHP;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		float CurrExp;
 };
 
@@ -52,6 +53,7 @@ class AI_MAP_API AGameCharacter : public ACharacter
 public:
 	// Sets default values for this character's properties
 	AGameCharacter();
+	virtual ~AGameCharacter();
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -85,29 +87,32 @@ public:
 	void SetAimYaw(float Yaw);
 	void SetCharacterMovementRotation(bool bState);
 	void Fire();
-
+	void UpdateHpWiget();
+	void SetGuardPoint(float Guard);
+	class AWeapon* GetMyWeapon() const;
 	void ExpUp(float Exp);//Test
 
 	bool FindAbility(int32 Index);
 	const float GetDamage();
 	bool IsFight();
 	float GetAimYaw();
+	float& GetCurrentHP();
+	float GetCurrentMaxHp();
 
 	UPROPERTY(EditAnywhere)
 	float CharacterSightRange = 700.f;
-	UFUNCTION(BlueprintImplementableEvent)
-		void SetLineOfSight();
 
 private:
 	UFUNCTION()
 		void TakenDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigateBy, AActor* DamageCauser);
-	UPROPERTY(EditAnywhere, BlueprintReadWrite , Category = "Components", meta = (AllowPrivateAccess = "true"))
-	class UBoxComponent* RecognizeRange;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	class USphereComponent* RecognizeVisibility;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* SpringArmComp;
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	class UCameraComponent* CameraComp;
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Socket", meta = (AllowPrivateAccess = true))
+		USceneComponent* AbilitySpawnPoint;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = true))
 		class AWeapon* Weapon;
 
@@ -115,11 +120,13 @@ private:
 		FName WeaponSocket= TEXT("WeaponSocket");
 	UPROPERTY(EditAnywhere,  Category = "Weapon", meta = (AllowPrivateAccess = "true"))
 		TSubclassOf<class AWeapon> WeaponClass;
-
+	
 	FRotator PrevCameraRotaion;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
 		FCharacterStat CharacterStat;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
+		float GuardPoint;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Widget", meta = (AllowPrivateAccess = "true"))
 		TSubclassOf<UUserWidget> MainHUDWidgetClass;
 	UPROPERTY()
@@ -153,9 +160,35 @@ private:
 	UPROPERTY()
 		float AimYaw;
 	UPROPERTY()
-		class AAbilityManager* Manager; // for Test
+		class AAbilityManager* AbilityManager; //AbilityManager
 	UPROPERTY()
 		class AAbilityBomb* Bomd;
 
-	
+public:
+	bool IsMyPlayer();
+
+	Protocol::MoveState GetMoveState() { return PlayerInfo->state(); }
+	void SetMoveState(Protocol::MoveState State);
+
+public:
+	void SetPlayerInfo(const Protocol::PosInfo& Info);
+	void SetDestInfo(const Protocol::PosInfo& Info);
+	Protocol::PosInfo* GetPlayerInfo() { return PlayerInfo; }
+
+public:
+	class Protocol::PosInfo* PlayerInfo;
+	class Protocol::PosInfo* DestInfo;
+
+	FVector2D DesiredInput;
+	FVector DesLoc;
+	FRotator DesRot;
+	FVector DesVel;
+	float   speed;
+
+	bool bReceived = false;
+
+	AWeapon* GetWeapon();
+	class UNetworkManager* GetNetworkManager() const;
+	void UpdateHP(float hp);
+	void SetDead(bool dead);
 };

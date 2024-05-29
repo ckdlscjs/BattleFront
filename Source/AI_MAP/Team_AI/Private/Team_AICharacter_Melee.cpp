@@ -5,6 +5,8 @@
 #include "Team_AIAnimInstance.h"
 #include "Components/BoxComponent.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "NetworkManager.h"
+
 ATeam_AICharacter_Melee::ATeam_AICharacter_Melee()
 {
 	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollision"));
@@ -22,25 +24,42 @@ void ATeam_AICharacter_Melee::BeginPlay()
 void ATeam_AICharacter_Melee::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
-	AttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ATeam_AICharacter_Melee::OnBeginOverlap);
+	AttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ATeam_AICharacter_Melee::AttackCollisionOverlap);
 	if (!AnimInstance)
 		return;
 	AnimInstance->OnAttackStart.AddLambda([this]() -> void
 		{
 			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("LambdaAttack!")));
 			AttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+			//Protocol::C_AIATTACK aiAttackPkt;
+			//{
+			//	aiAttackPkt.set_object_id(pos.object_id());
+			//	GetNetworkManager()->SendPacket(aiAttackPkt);
+			//}
 		});
 	AnimInstance->OnAttackEnd.AddLambda([this]() -> void
 		{
 			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("AttackEnd!")));
 			AttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		});
+	AnimInstance->OnAttackParticle.AddLambda([this]() -> void
+		{
+			ActivateParticleSystem(TEXT("Melee"));
+		});
 }
 
-void ATeam_AICharacter_Melee::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void ATeam_AICharacter_Melee::AttackCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	//TODO:BeginOverlap
-	if (AttackParticleSystem->Template)
-		AttackParticleSystem->Activate(true);
+	/*if (AttackParticleSystem->Template)
+		AttackParticleSystem->Activate(true);*/
 	UGameplayStatics::ApplyDamage(OtherActor, Attack, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
+	//TODO : Make Hit Packet
+	// need object_id
+	Protocol::C_AIHIT aiHitPkt;
+	{
+		aiHitPkt.set_object_id(pos.object_id());
+		GetNetworkManager()->SendPacket(aiHitPkt);
+	}
 }

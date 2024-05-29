@@ -28,8 +28,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class UImage* R_SkillIamge;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		class UImage* T_SkillIamge;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class UHorizontalBox* SkillLevelSet;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class USkillLevelWidget* Q_SkillWidget;
@@ -39,8 +37,6 @@ protected:
 		class USkillLevelWidget* E_SkillWidget; 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class USkillLevelWidget* R_SkillWidget; 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		class USkillLevelWidget* T_SkillWidget;
 
 	UPROPERTY()
 		TMap<class UImage*, class USkillLevelWidget*> SkillArr;

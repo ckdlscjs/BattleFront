@@ -11,7 +11,6 @@ UBTTask_Attack::UBTTask_Attack()
 
 EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-
     ATeam_AIController* AIController = Cast<ATeam_AIController>(OwnerComp.GetAIOwner());
     if (!AIController)
         return EBTNodeResult::Failed;
@@ -21,10 +20,11 @@ EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerCom
     UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
     if (!Blackboard)
         return EBTNodeResult::Failed;
-    
+   /* if (!Blackboard->GetValueAsBool(ATeam_AIController::AttackAvailableKey))
+        return EBTNodeResult::Failed;*/
 	AICharacter->BehaviorAttack();
     AICharacter->SendTest("Attack");
-    Blackboard->SetValueAsBool(ATeam_AIController::AttackAvailableKey, false);
-	return EBTNodeResult::Succeeded;
+    //Blackboard->SetValueAsBool(ATeam_AIController::AttackAvailableKey, false);
+	return EBTNodeResult::InProgress;
 }
 	

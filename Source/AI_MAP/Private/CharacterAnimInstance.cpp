@@ -16,8 +16,9 @@ void UCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	auto Pawn = TryGetPawnOwner();
 	if (IsValid(Pawn))
 	{
-		Speed = Pawn->GetVelocity().Size();
+		//Speed = Pawn->GetVelocity().Size();
 		AGameCharacter* Character = Cast<AGameCharacter>(Pawn);
+		Speed = Character->speed;
 		bDead = Character->IsDead();
 		FVector Vel = Pawn->GetVelocity();
 		FVector Dir = UKismetMathLibrary::InverseTransformDirection(Pawn->GetActorTransform(), Vel);

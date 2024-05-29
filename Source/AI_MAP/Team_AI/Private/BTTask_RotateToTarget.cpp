@@ -24,7 +24,7 @@ EBTNodeResult::Type UBTTask_RotateToTarget::ExecuteTask(UBehaviorTreeComponent& 
     if (!Blackboard)
         return EBTNodeResult::Failed;
     AICharacter->SendTest("Rotate");
-    if (AIController->GetState() == ECharacterState::ATTACK)
+    if (AIController->GetState() == ECharacterState::ATTACK)    
     {
         AActor* Target = Cast<AActor>(OwnerComp.GetBlackboardComponent()->GetValueAsObject(ATeam_AIController::TargetKey));
         if (!Target)
@@ -47,19 +47,19 @@ void UBTTask_RotateToTarget::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* 
     if (!Blackboard)
         return;
 
-    // ¹æÇâ º¤ÅÍ¸¦ »ç¿ëÇÏ¿© È¸Àü °ª °è»ê
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½ï¿½ï¿½ï¿½Ï¿ï¿½ È¸ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½
     FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(AICharacter->GetActorLocation(), Blackboard->GetValueAsVector(ATeam_AIController::PatrolPosKey));
 
-    // Yaw °ª¸¸ »ç¿ëÇÏ¿© Target È¸Àü °ª¿¡¼­ Yaw È¸Àü °ªÀ» ÃßÃâ
+    // Yaw ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ï¿ï¿½ Target È¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Yaw È¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     FRotator TargetYawRotation = FRotator(0, TargetRotation.Yaw, 0);
 
-    // ÇöÀç Ä³¸¯ÅÍÀÇ È¸Àü °ªÀ» °¡Á®¿È
+    // ï¿½ï¿½ï¿½ï¿½ Ä³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     FRotator CurrentRotation = AICharacter->GetActorRotation();
 
-    // º¸°£µÈ È¸Àü °ª °è»ê
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È¸ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½
     FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetYawRotation, DeltaSeconds, 10.0f);
 
-    // Ä³¸¯ÅÍÀÇ È¸Àü °ªÀ» ¼³Á¤
+    // Ä³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     AICharacter->SetActorRotation(NewRotation);
     
     //Server

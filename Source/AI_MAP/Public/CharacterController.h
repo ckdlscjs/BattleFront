@@ -7,6 +7,8 @@
 #include "InputActionValue.h"
 #include "CharacterController.generated.h"
 
+class UNetworkManager;
+
 /**
  * 
  */
@@ -30,8 +32,8 @@ protected:
 	void EdgeCameraMove();
 	void CameraRotationReset(const FInputActionValue& Value);
 	void AbilityChoose(const FInputActionValue& Value);
-	FVector GetHitResultLoc();
-
+	void GetHitResultLoc(FHitResult& Hit);
+	bool CheckActorTag(AActor* HitActor);
 	/*Test Code*/
 	void LevelUp(const FInputActionValue& Value);
 	void ExpUp(const FInputActionValue& Value);
@@ -73,4 +75,9 @@ private:
 	float CameraSpeed;
 
 	FRotator Look;
+
+public:
+	UNetworkManager* GetNetworkManager() const;
+	const float MOVE_PACKET_SEND_DELAY = 0.0f;
+	float MovePacketSendTimer = MOVE_PACKET_SEND_DELAY;
 };

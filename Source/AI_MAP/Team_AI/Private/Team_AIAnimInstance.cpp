@@ -21,7 +21,7 @@ void UTeam_AIAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		CurrentPawnSpeed = Cast<ATeam_AICharacterBase>(Pawn)->GetCurrentSpeed();
 }
 
-float UTeam_AIAnimInstance::PlayAttackMontage(float PlayRate)
+float UTeam_AIAnimInstance::PlayAttackMontage(float PlayRate, int idx)
 {
 	/*TArray<FSlotAnimationTrack> slots = AttackMontage->SlotAnimTracks;
 	for (const auto& iter : slots)
@@ -29,7 +29,7 @@ float UTeam_AIAnimInstance::PlayAttackMontage(float PlayRate)
 		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("%s"), *iter.SlotName.ToString()));
 	}*/
 	IsAttacking = true;
-	return Montage_Play(AttackMontage, PlayRate);
+	return Montage_Play(AttackMontages[idx], PlayRate);
 }
 
 float UTeam_AIAnimInstance::PlayDeadMontage(float PlayRate)
@@ -46,6 +46,11 @@ bool UTeam_AIAnimInstance::GetAttacking() const
 bool UTeam_AIAnimInstance::GetDead() const
 {
 	return IsDead;
+}
+
+uint64 UTeam_AIAnimInstance::GetAttackMontagesSize() const
+{
+	return AttackMontages.Num();
 }
 
 void UTeam_AIAnimInstance::AnimNotify_AttackStartCheck()
@@ -67,5 +72,10 @@ void UTeam_AIAnimInstance::AnimNotify_AttackMontageEndCheck()
 void UTeam_AIAnimInstance::AnimNotify_DeadCheck()
 {
 	OnDead.Broadcast();
+}
+
+void UTeam_AIAnimInstance::AnimNotify_AttackParticleCheck()
+{
+	OnAttackParticle.Broadcast();
 }
 

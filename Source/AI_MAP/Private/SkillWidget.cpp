@@ -34,11 +34,6 @@ void USkillWidget::NativeOnInitialized()
 	SkillArr.Add(R_SkillIamge, R_SkillWidget);
 	SkillImageArr.Add(3, R_SkillIamge);
 
-	T_SkillIamge = Cast<UImage>(GetWidgetFromName(TEXT("T_Image")));
-	T_SkillWidget = Cast<USkillLevelWidget>(GetWidgetFromName(TEXT("TSkillLevel")));
-	SkillArr.Add(T_SkillIamge, T_SkillWidget);
-	SkillImageArr.Add(4, T_SkillIamge);
-
 }
 
 void USkillWidget::UpdateSkillImage(UTexture2D* Texture, int32 index)

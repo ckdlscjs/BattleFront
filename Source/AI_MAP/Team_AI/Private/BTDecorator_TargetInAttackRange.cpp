@@ -3,10 +3,10 @@
 
 #include "BTDecorator_TargetInAttackRange.h"
 #include "Team_AIController.h"
-#include "Team_AICharacterBase.h"
+#include "Team_AICharacter_Boss.h"
 #include "BehaviorTree/BlackboardComponent.h"
 /*
-* NotUsed, use BTService_TargetInRange
+* Boss TargetInRange
 */
 UBTDecorator_TargetInAttackRange::UBTDecorator_TargetInAttackRange()
 {
@@ -20,16 +20,30 @@ bool UBTDecorator_TargetInAttackRange::CalculateRawConditionValue(UBehaviorTreeC
     ATeam_AIController* AIController = Cast<ATeam_AIController>(OwnerComp.GetAIOwner());
     if (!AIController)
         return false;
-    ATeam_AICharacterBase* AICharacter = Cast<ATeam_AICharacterBase>(AIController->GetPawn());
+    ATeam_AICharacter_Boss* AICharacter = Cast<ATeam_AICharacter_Boss>(AIController->GetPawn());
     if (!AICharacter)
         return false;
     UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
     if (!Blackboard)
         return false;
-    AActor* Target = Cast<AActor>(OwnerComp.GetBlackboardComponent()->GetValueAsObject(ATeam_AIController::TargetKey));
-    if (!Target)
+    if (AICharacter->RecognizePlayers())
+    {
+        AIController->SetState(ECharacterState::ATTACK);
+        return true;
+    }
+    AIController->SetState(ECharacterState::IDLE);
+    return false;
+
+    /*if (AICharacter->RecognizePlayers())
+    {
+        UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("TruePlayers")));
+        return true;
+    }
+    else
+    {
+        UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("FalsePlayers")));
         return false;
-    UKismetSystemLibrary::PrintString(GetWorld(), FString(TEXT("!!!!!!!")), true, false);
+    }*/
     /*
     TArray<FOverlapResult> OverlapResults;
     FCollisionQueryParams CollisionQueryParam(NAME_None, false, AICharacter);
@@ -54,21 +68,5 @@ bool UBTDecorator_TargetInAttackRange::CalculateRawConditionValue(UBehaviorTreeC
         OwnerComp.GetBlackboardComponent()->SetValueAsObject(ATeam_AIController::TargetKey, nullptr);
     }
     */
-
-    Blackboard->SetValueAsVector(ATeam_AIController::PatrolPosKey, Target->GetActorLocation());
-    if (AICharacter->GetDistanceTo(Target) <= AICharacter->GetAttackRange())
-    {
-        UE_LOG(LogTemp, Error, TEXT("IsInRange"));
-
-        return true;
-    }
-        
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("NotInRange"));
-
-        return false;
-    }
-        
 }
 

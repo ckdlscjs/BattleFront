@@ -6,11 +6,14 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameCharacter.h"
 #include "Perception/AISenseConfig_Damage.h"
+#include "NetworkManager.h"
+#include "Team_AIGameMode.h"
 #include "Components/SphereComponent.h"
+
 // Sets default values
 AProjectile::AProjectile()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	//Capsule Component...?
 	SphereCollision = CreateDefaultSubobject<USphereComponent>(TEXT("SphereCollision"));
@@ -26,14 +29,14 @@ AProjectile::AProjectile()
 void AProjectile::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+	SphereCollision->OnComponentBeginOverlap.AddDynamic(this,&AProjectile::OnBeginOverlap);
 	//Mesh->OnComponentBeginOverlap.AddDynamic(this,&AProjectile::OnBeginOverlap);
-	//SphereCollision->OnComponentHit.AddDynamic(this, &AProjectile::OnHit);
-	SphereCollision->OnComponentBeginOverlap.AddDynamic(this, &AProjectile::OnBeginOverlap);
+	//Mesh->OnComponentHit.AddDynamic(this, &AProjectile::OnHit);
 }
 
 void AProjectile::SetCollisionEnable(bool bCollide)
 {
-	SphereCollision->SetCollisionEnabled(bCollide? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+	SphereCollision->SetCollisionEnabled(bCollide ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
 }
 
 // Called when the game starts or when spawned
@@ -57,13 +60,36 @@ void AProjectile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActo
 		Destroy();
 		return;
 	}
-	BulletDamage = Cast<AGameCharacter>(MyOwner)->GetDamage();
-	auto MyOwnerInstigator = MyOwner->GetInstigatorController();
-	auto DamageTypeClass = UDamageType::StaticClass();
-	if (OtherActor != nullptr && OtherActor != this && OtherActor != MyOwner)
-	{
-		UGameplayStatics::ApplyDamage(OtherActor, BulletDamage, MyOwnerInstigator, this, DamageTypeClass);
-	}
+	auto NetManager = GetGameInstance()->GetSubsystem<UNetworkManager>();
+	auto gm = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	auto Player = Cast<AGameCharacter>(MyOwner);
+
+	//if (NetManager->MyPlayer->PlayerInfo->object_id() == 0)
+	//if (gm->GetMyPlayer()->PlayerInfo->object_id() == 1)
+	//{
+		BulletDamage = Cast<AGameCharacter>(MyOwner)->GetDamage();
+		auto MyOwnerInstigator = MyOwner->GetInstigatorController();
+		auto DamageTypeClass = UDamageType::StaticClass();
+		if (OtherActor != nullptr && OtherActor != this && OtherActor != MyOwner)
+		{
+			UGameplayStatics::ApplyDamage(OtherActor, BulletDamage, MyOwnerInstigator, this, DamageTypeClass);
+			//AGameCharacter* HitPlayer = Cast<AGameCharacter>(OtherActor);
+			//if (IsValid(HitPlayer) == false)
+			//{
+			//	Destroy();
+			//	return;
+			//}
+			// 
+			//Protocol::C_HIT HitPkt;
+			//{
+			//	HitPkt.set_ownerid(Player->PlayerInfo->object_id());
+			//	HitPkt.set_targetid(HitPlayer->PlayerInfo->object_id());
+			//	HitPkt.set_damage(BulletDamage);
+			//
+			//	GetNetworkManager()->SendPacket(HitPkt);
+			//}
+		}
+	//}
 	UAISense_Damage::ReportDamageEvent(GetWorld(), OtherActor, GetOwner(), BulletDamage, GetActorLocation(), GetActorLocation());
 	Destroy();
 }
@@ -76,14 +102,42 @@ void AProjectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, U
 		Destroy();
 		return;
 	}
-	BulletDamage = Cast<AGameCharacter>(MyOwner)->GetDamage();
-	auto MyOwnerInstigator = MyOwner->GetInstigatorController();
-	auto DamageTypeClass = UDamageType::StaticClass();
-	if (OtherActor != nullptr && OtherActor != this && OtherActor != MyOwner)
+	auto NetManager = GetGameInstance()->GetSubsystem<UNetworkManager>();
+	auto gm = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	auto Player = Cast<AGameCharacter>(MyOwner);
+
+	//if (NetManager->MyPlayer->PlayerInfo->object_id() == 0)
+	if (gm->GetMyPlayer()->PlayerInfo->object_id() == 1)
 	{
-		UGameplayStatics::ApplyDamage(OtherActor, BulletDamage, MyOwnerInstigator, this, DamageTypeClass);
+		//아마 여기서 충돌 했다고 패킷을 보내야 겠지?
+		BulletDamage = Cast<AGameCharacter>(MyOwner)->GetDamage();
+		auto MyOwnerInstigator = MyOwner->GetInstigatorController();
+		auto DamageTypeClass = UDamageType::StaticClass();
+		if (OtherActor != nullptr && OtherActor != this && OtherActor != MyOwner)
+		{
+			UGameplayStatics::ApplyDamage(OtherActor, BulletDamage, MyOwnerInstigator, this, DamageTypeClass);
+			AGameCharacter* HitPlayer = Cast<AGameCharacter>(OtherActor);
+			if (IsValid(HitPlayer) == false)
+			{
+				Destroy();
+				return;
+			}
+			Protocol::C_HIT HitPkt;
+			{
+				HitPkt.set_ownerid(Player->PlayerInfo->object_id());
+				HitPkt.set_targetid(HitPlayer->PlayerInfo->object_id());
+				HitPkt.set_damage(BulletDamage);
+
+				GetNetworkManager()->SendPacket(HitPkt);
+			}
+		}
 	}
+
 	UAISense_Damage::ReportDamageEvent(GetWorld(), OtherActor, GetOwner(), BulletDamage, GetActorLocation(), GetActorLocation());
 	Destroy();
 }
 
+UNetworkManager* AProjectile::GetNetworkManager() const
+{
+	return GetGameInstance()->GetSubsystem<UNetworkManager>();
+}

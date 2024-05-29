@@ -5,12 +5,22 @@
 #include "GameCharacter.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "Engine/World.h"
 #include "InputCoreTypes.h"
 #include "Projectile.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Kismet/GameplayStatics.h"
+#include "Weapon.h"
+#include "Engine/EngineTypes.h"
+#include "Components/CapsuleComponent.h"
+
+// Server
+#include "NetworkManager.h"
+#include "ClientPacketHandler.h"
+#include "SendBuffer.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 void ACharacterController::BeginPlay()
 {
@@ -35,27 +45,55 @@ void ACharacterController::Tick(float DeltaTime)
 	{
 		EdgeCameraMove();
 	}
+	FHitResult Result;
+	GetHitResultLoc(Result);
 	
-	if (GameCharacter->IsFight())
+	FVector Forward = GameCharacter->GetActorForwardVector();
+	FVector HitLoc = Result.Location;
+	FVector ActorLoc = GameCharacter->GetActorLocation();
+	FVector Temp = HitLoc - ActorLoc;
+	Temp.Z = Forward.Z;
+	FRotator rot = UKismetMathLibrary::FindLookAtRotation(Forward, Temp);
+	GameCharacter->SetActorRotation(rot);
+
+	//Server
+	/*
+	if (GameCharacter->DesiredInput == FVector2D::Zero())
 	{
-		
-		FVector Forward = GameCharacter->GetActorForwardVector();
-		FVector Temp = GetHitResultLoc() - GameCharacter->GetActorLocation();
-		Temp.Z = 0;
-		Temp.Normalize();
-		float Degree = UKismetMathLibrary::DegAcos(FVector::DotProduct(Temp, Forward));
-		FVector Cross = FVector::CrossProduct(Temp, Forward);
-		if (Degree > 90)
-		{
-			GameCharacter->SetActorRotation(FMath::RInterpTo(GameCharacter->GetActorRotation(), Look, DeltaTime, 5.f));
-		}
-		if (Cross.Z < 0)
-		{
-			Degree *= -1;
-		}
-		
-		GameCharacter->SetAimYaw(Degree);	
+		GameCharacter->SetMoveState(Protocol::MOVE_STATE_IDLE);
+		GameCharacter->speed = 0.0f;
 	}
+	else
+		GameCharacter->SetMoveState(Protocol::MOVE_STATE_RUN);
+
+	MovePacketSendTimer -= DeltaTime;
+
+	if (MovePacketSendTimer <= 0)
+	{
+		MovePacketSendTimer = MOVE_PACKET_SEND_DELAY;
+
+		Protocol::C_MOVE MovePkt;
+
+		Protocol::PosInfo* Info = MovePkt.mutable_info();
+		Info->set_object_id(GameCharacter->PlayerInfo->object_id());
+
+		Info->set_x(GameCharacter->DesLoc.X);
+		Info->set_y(GameCharacter->DesLoc.Y);
+		Info->set_z(GameCharacter->DesLoc.Z);
+
+		Info->set_yaw(GameCharacter->DesRot.Yaw);
+
+		//Info->set_vx(GameCharacter->DesVel.X);
+		//Info->set_vy(GameCharacter->DesVel.Y);
+		//Info->set_vz(GameCharacter->DesVel.Z);
+
+		Info->set_speed(GameCharacter->speed);
+		Info->set_aimyaw(GameCharacter->GetAimYaw());
+		Info->set_state(GameCharacter->GetMoveState());
+
+		GetNetworkManager()->SendPacket(MovePkt);
+	}
+	*/
 }
 void ACharacterController::SetupInputComponent()
 {
@@ -64,6 +102,7 @@ void ACharacterController::SetupInputComponent()
 	if (EnhancedInputComponent != nullptr)
 	{
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ACharacterController::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &ACharacterController::Move);
 		EnhancedInputComponent->BindAction(ChangeDetachState, ETriggerEvent::Started, this, &ACharacterController::CameraDetachState);
 		EnhancedInputComponent->BindAction(CameraMoveAction, ETriggerEvent::Started, this, &ACharacterController::CameraMove);
 		EnhancedInputComponent->BindAction(CameraRotationAction, ETriggerEvent::Triggered, this, &ACharacterController::CameraRotation);
@@ -71,6 +110,7 @@ void ACharacterController::SetupInputComponent()
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ACharacterController::CharacterAction);
 		EnhancedInputComponent->BindAction(CameraReset, ETriggerEvent::Started, this, &ACharacterController::CameraRotationReset);
 		EnhancedInputComponent->BindAction(AbilityChooseAction, ETriggerEvent::Started, this, &ACharacterController::AbilityChoose);
+		
 		//Test Code
 		EnhancedInputComponent->BindAction(LevelUpAction, ETriggerEvent::Started, this, &ACharacterController::LevelUp);
 		EnhancedInputComponent->BindAction(ExpUpAction, ETriggerEvent::Started, this, &ACharacterController::ExpUp);
@@ -82,6 +122,8 @@ void ACharacterController::Move(const FInputActionValue& Value)
 {
 	bool IsFight = GameCharacter->IsFight();
 	FVector2D MovementVector = Value.Get<FVector2D>();
+	/*UPathFollowingComponent* PFollowComp = InitNavigationControl(this);*/
+	StopMovement();
 	FRotator Rot(0.f);
 	if (IsFight == false)
 	{
@@ -97,6 +139,13 @@ void ACharacterController::Move(const FInputActionValue& Value)
 	FVector vec = GameCharacter->GetActorLocation();
 	FVector ForwardVec = UKismetMathLibrary::GetForwardVector(FRotator(Rot.Pitch, Rot.Yaw, 0));
 	GameCharacter->AddMovementInput(ForwardVec, MovementVector.Y);
+
+	//Server
+	GameCharacter->DesiredInput = MovementVector;
+	GameCharacter->DesLoc = GameCharacter->GetActorLocation();
+	GameCharacter->DesRot = GameCharacter->GetActorRotation();
+	//GameCharacter->DesVel = GameCharacter->GetCharacterMovement()->GetCurrentAcceleration();
+	GameCharacter->speed = GameCharacter->GetVelocity().Size();
 }
 
 void ACharacterController::CameraDetachState()
@@ -151,19 +200,33 @@ void ACharacterController::CameraRotation(const FInputActionValue& Value)
 	}
 
 }
-
 void ACharacterController::CharacterAction(const FInputActionValue& Value)
 {
 	bool bAttack = Value.Get<bool>();
 	if (bAttack)
 	{
-		GameCharacter->SetFightState(true);
+		FHitResult Res;
+		GetHitResultLoc(Res);
+		AActor* HitActor = Res.GetActor();
+		bool bIsActor = CheckActorTag(HitActor);
+		if (bIsActor == true)
+		{
+			GameCharacter->Fire();
+		}
+		/*else
+		{
+			FVector Dir = (Res.Location - GameCharacter->GetActorLocation()).GetSafeNormal();
+			GameCharacter->AddMovementInput(Dir, 1.0, false);
+			UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, Res.Location);
+		}*/
+		/*GameCharacter->SetFightState(true);
 		AimVector = GetHitResultLoc();
-		FVector CharLoc = GameCharacter->GetActorLocation();
-		AimVector.Z = CharLoc.Z;
-		Look = UKismetMathLibrary::FindLookAtRotation(CharLoc, AimVector);
-		
-		GameCharacter->Fire();
+		FVector Forward = GameCharacter->GetActorForwardVector();
+		FVector Temp = AimVector - GameCharacter->GetActorLocation();
+		Temp.Z = Forward.Z;
+		Temp.Normalize();*/
+		//Look = UKismetMathLibrary::MakeRotator(0, 0, Degree);
+		/*Look = UKismetMathLibrary::FindLookAtRotation(Forward, Temp);*/
 	}
 }
 
@@ -252,19 +315,72 @@ void ACharacterController::AbilityChoose(const FInputActionValue& Value)
 	}
 	GameCharacter->SetAbility(index);
 }
-FVector ACharacterController::GetHitResultLoc()
+void ACharacterController::GetHitResultLoc(FHitResult& Hit)
 {
+	//FHitResult HitTemp;
+	//GetHitResultUnderCursorByChannel(UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel12), true, HitTemp);
+	//float HalfHeight = GameCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	//TArray<AActor*> ActorArr;
+	//ActorArr.Add(GameCharacter);
+	//
+	//UKismetSystemLibrary::SphereTraceSingle(GetWorld(), HitTemp.TraceStart, HitTemp.TraceEnd, HalfHeight,
+	//	UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel12), false, ActorArr, EDrawDebugTrace::ForOneFrame,Hit,true);
+	
+
 	FVector MouseLoc(0.f);
 	FVector MouseDir(0.f);
 	if (DeprojectMousePositionToWorld(MouseLoc, MouseDir))
 	{
+		FRotator rot = FRotator::ZeroRotator;
+		//MouseLoc.RotateAngleAxis(25, FVector(0, 1, 0));
 		MouseDir = MouseLoc + (MouseDir * 100000);
-		FHitResult Result;
-		GetWorld()->LineTraceSingleByChannel(Result, MouseLoc, MouseDir, ECC_GameTraceChannel2);
-		return Result.Location;
+		
+		GetWorld()->LineTraceSingleByChannel(Hit, MouseLoc, MouseDir, ECC_GameTraceChannel2);
+	
 	}
-	return FVector::ZeroVector;
+	return;
 }
+bool ACharacterController::CheckActorTag(AActor* HitActor)
+{
+	bool Check = true;
+	//if (HitActor != nullptr)
+	//{
+	//	Check = (HitActor->ActorHasTag(TEXT("Enemy"))||HitActor->ActorHasTag(TEXT("Player")));
+	//}
+
+	return Check;
+}
+//FVector ACharacterController::GetHitResultLoc()
+//{
+//	FVector MouseLoc(0.f);
+//	FVector MouseDir(0.f);
+//	FHitResult Result;
+//	//bool bHitSuccess = false;
+//	//
+//	//bHitSuccess = GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, true, Result);
+//	//if (bHitSuccess == true)
+//	//{
+//	//	DrawDebugSphere(GetWorld(), Result.Location, 10, 2, FColor::Red, true, -1, 0, 2);
+//	//	return Result.Location;
+//	//}
+//	if (DeprojectMousePositionToWorld(MouseLoc, MouseDir))
+//	{
+//		FRotator rot = FRotator::ZeroRotator;
+//		MouseDir = MouseLoc + (MouseDir * 100000);
+//		
+//		GetWorld()->LineTraceSingleByChannel(Result, MouseLoc, MouseDir, ECollisionChannel::ECC_Visibility);
+//		AActor* Obj = Result.GetActor();
+//		if (!Obj->ActorHasTag(TEXT("Enemy")))
+//		{
+//			int32 a = 0;
+//			a = 10;
+//		}
+//		DrawDebugSphere(GetWorld(), Result.Location, 3, 3, FColor::Red, true, 1, 1, 3);
+//		return Result.Location;
+//	}
+//	return FVector::ZeroVector;
+//}
+
 /// test function
 void ACharacterController::LevelUp(const FInputActionValue& Value)
 {
@@ -280,5 +396,10 @@ void ACharacterController::ExpUp(const FInputActionValue& Value)
 	{
 		GameCharacter->ExpUp(17);
 	}
+}
+
+UNetworkManager* ACharacterController::GetNetworkManager() const
+{
+	return GetGameInstance()->GetSubsystem<UNetworkManager>();
 }
 

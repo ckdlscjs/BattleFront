@@ -5,6 +5,7 @@
 
 #include "AI_MAP.h"
 #include "GameFramework/Character.h"
+#include "Protocol.pb.h"
 #include "Team_AICharacterBase.generated.h"
 
 UENUM(BlueprintType)
@@ -37,6 +38,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	float GetCurrentSpeed();
+
+	//hyuk add
+	UFUNCTION(BlueprintCallable)
+	void SetCurrentSpeed(float speed);
+
 	UFUNCTION(BlueprintCallable)
 	bool IsDead() const;
 
@@ -48,7 +54,7 @@ public:
 	float GetAttackDelay() const;
 	float GetDetectRadius();
 	float GetPatrolRadius();
-	void BehaviorAttack();
+	virtual void BehaviorAttack(int idx = 0);
 	UFUNCTION(BlueprintCallable, CallInEditor)
 	void BehaviorDead();
 	UFUNCTION()
@@ -71,6 +77,12 @@ public:
 	virtual void SendTest(FString str);
 	UFUNCTION(BlueprintCallable)
 	virtual void RecvTest(FString str);
+
+	UFUNCTION(BlueprintCallable)
+	virtual void ActivateParticleSystem(FString str);
+
+	UFUNCTION(BlueprintCallable)
+	virtual const class UParticleSystemComponent* GetParticleSystemComponent(FString str) const;
 	
 protected:
 
@@ -133,10 +145,18 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		ECharacterState CurrentState;
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UParticleSystemComponent* AttackParticleSystem;*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		class UParticleSystemComponent* AttackParticleSystem;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		ATeam_AICharacterBase* RecvAI;
+		TMap<FString, class UParticleSystemComponent*> ParticleSystems;
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		ATeam_AICharacterBase* RecvAI;*/
 private:
 
+
+// Server
+public:
+	Protocol::PosInfo pos;
+	class UNetworkManager* GetNetworkManager() const;
+	void SetCurHP(float hp);
 };

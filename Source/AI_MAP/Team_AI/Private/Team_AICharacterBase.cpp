@@ -2,7 +2,6 @@
 
 
 #include "Team_AICharacterBase.h"
-#include "Kismet/GameplayStatics.h"
 #include "Team_AIGameMode.h"
 #include "Team_AIController.h"
 //#include "Team_AIProjectileBase.h"
@@ -14,12 +13,15 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BTTaskNode.h"
 #include "GameCharacter.h"
+#include "NetworkManager.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "Team_AIGameMode.h"
+
 // Sets default values
 ATeam_AICharacterBase::ATeam_AICharacterBase()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	AIControllerClass = ATeam_AIController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
@@ -44,16 +46,18 @@ ATeam_AICharacterBase::ATeam_AICharacterBase()
 	PatrolIndex = 0;
 	PatrolDirection = 1;
 	CurrentState = ECharacterState::IDLE;
-	AttackParticleSystem = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("AttackParticleSystem"));
-	AttackParticleSystem->SetupAttachment(RootComponent);
-	AttackParticleSystem->bAutoActivate = false;
+	//AttackParticleSystem = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("AttackParticleSystem"));
+	//AttackParticleSystem->SetupAttachment(RootComponent);
+	//AttackParticleSystem->bAutoActivate = false;
 }
 
 // Called when the game starts or when spawned
 void ATeam_AICharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	for (const auto& iter : K2_GetComponentsByClass(UParticleSystemComponent::StaticClass()))
+		ParticleSystems.Add(TTuple<FString, UParticleSystemComponent*>(iter->GetName(), Cast<UParticleSystemComponent>(iter)));
+		
 	//TODO : GetGameLevel
 	SetStat(Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()))->GetGameLevel());
 	ATeam_AIController* AIController = Cast<ATeam_AIController>(GetController());
@@ -64,14 +68,30 @@ void ATeam_AICharacterBase::BeginPlay()
 
 void ATeam_AICharacterBase::TakenDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
 {
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("TakenDamage:%f"), Damage));
-	CurHp -= Damage;
-	if (CurHp <= 0.0f && !AnimInstance->GetDead())
+	if (GetNetworkManager()->GameMode->GetMyPlayer()->PlayerInfo->object_id() == 1)
 	{
-		SendTest("Dead");
-		BehaviorDead();
+		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("TakenDamage:%f"), Damage));
+		CurHp -= Damage;
+		Protocol::C_AIDAMAGED AIDmgedPkt;
+		{
+			AIDmgedPkt.set_object_id(pos.object_id());
+			AIDmgedPkt.set_hp(CurHp);
+
+			GetNetworkManager()->SendPacket(AIDmgedPkt);
+		}
+		if (CurHp <= 0.0f && !AnimInstance->GetDead())
+		{
+			Protocol::C_AIDEAD AIDeadPkt;
+			{
+				AIDeadPkt.set_object_id(pos.object_id());
+
+				GetNetworkManager()->SendPacket(AIDeadPkt);
+			}
+
+			//SendTest("Dead");
+			BehaviorDead();
+		}
 	}
-		
 }
 
 void ATeam_AICharacterBase::SetStat(int32 CharacterLevel)
@@ -84,19 +104,23 @@ void ATeam_AICharacterBase::SetStat(int32 CharacterLevel)
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("CharacterLevel : %d"), RowData->Level));
 	Level = RowData->Level;
 	MaxHP = RowData->MaxHP * EnemyStatDecreaseAmount;
-	CurHp = MaxHP;
+	//CurHp = MaxHP;
+	CurHp = 1.0f;
 	Attack = RowData->Attack * EnemyStatDecreaseAmount;
 	Armor = RowData->Armor * EnemyStatDecreaseAmount;
 	Speed = RowData->Speed * EnemyStatDecreaseAmount;
 }
 
-
-
 // Called every frame
 void ATeam_AICharacterBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	SpeedCurrent = GetVelocity().Size();
+	//auto player = GetNetworkManager()->gamedmoMyPlayer;
+	auto player = GetNetworkManager()->GameMode->GetMyPlayer();
+	if (!player)
+		return;
+	if(player->PlayerInfo->object_id() == 1)
+		SpeedCurrent = GetVelocity().Size();
 }
 
 void ATeam_AICharacterBase::PostInitializeComponents()
@@ -109,7 +133,7 @@ void ATeam_AICharacterBase::PostInitializeComponents()
 		return;
 	OnTakeAnyDamage.AddDynamic(this, &ATeam_AICharacterBase::TakenDamage);
 	/*
-	AnimInstance->OnAttackStart.AddLambda([this]() -> void 
+	AnimInstance->OnAttackStart.AddLambda([this]() -> void
 		{
 			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("LambdaAttack!")));
 			if (ProjectileClass)
@@ -126,6 +150,8 @@ void ATeam_AICharacterBase::PostInitializeComponents()
 		{
 			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("LambdaDead!!!!!!!!!!!!!!!!!!!!!")));
 			Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()))->DeleteSpawnActor(this);
+			auto gm = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+			gm->SetAIDespawn(pos.object_id());
 			Destroy();
 		});
 	AnimInstance->OnAttackMontageEnd.AddLambda([this]() -> void
@@ -138,6 +164,7 @@ void ATeam_AICharacterBase::PostInitializeComponents()
 				return;
 			BehaviorTree->OnTaskFinished(Cast<UBTTaskNode>(BehaviorTree->GetActiveNode()), EBTNodeResult::Succeeded);
 		});
+
 }
 
 // Called to bind functionality to input
@@ -164,14 +191,14 @@ float ATeam_AICharacterBase::GetAttackDelay() const
 /*
 * TODO:Animation
 */
-void ATeam_AICharacterBase::BehaviorAttack()
+void ATeam_AICharacterBase::BehaviorAttack(int idx)
 {
 	if (IsDead())
 		return;
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Attacking!!")), true, false, FColor::Red);
 	//TODO : Attak
 	if (AnimInstance)
-		AnimInstance->PlayAttackMontage(AttackSpeed);
+		AnimInstance->PlayAttackMontage(AttackSpeed, idx);
 }
 
 void ATeam_AICharacterBase::BehaviorDead()
@@ -241,9 +268,65 @@ ECharacterState ATeam_AICharacterBase::GetCurrentState()
 
 void ATeam_AICharacterBase::SendTest(FString str)
 {
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("%s"), *str));
-	if (RecvAI)
-		RecvAI->RecvTest(str);
+	if (str == "MoveTo")
+	{
+		Protocol::C_AIMOVE aimovePkt;
+		{
+			FVector loc = GetActorLocation();
+			FRotator rot = GetActorRotation();
+			Protocol::PosInfo* Info = aimovePkt.mutable_info();
+			Info->set_object_id(pos.object_id());
+
+			Info->set_x(loc.X);
+			Info->set_y(loc.Y);
+			Info->set_z(loc.Z);
+
+			Info->set_yaw(rot.Yaw);
+			Info->set_speed(SpeedCurrent);
+
+			GetNetworkManager()->SendPacket(aimovePkt);
+		}
+	}
+	else if (str == "MoveEnd")
+	{
+		Protocol::C_AIMOVESTOP aimovePkt;
+		{
+			aimovePkt.set_object_id(pos.object_id());
+			aimovePkt.set_speed(pos.speed());
+
+			GetNetworkManager()->SendPacket(aimovePkt);
+		}
+	}
+	else if (str == "Attack")
+	{
+		Protocol::C_AIATTACK aiAttackPkt;
+		{
+			aiAttackPkt.set_object_id(pos.object_id());
+			GetNetworkManager()->SendPacket(aiAttackPkt);
+		}
+	}
+	else if (str == "RotateTo")
+	{
+		Protocol::C_AIROTATE airotPkt;
+		{
+			airotPkt.set_object_id(pos.object_id());
+
+			FRotator rot = GetActorRotation();
+			airotPkt.set_yaw(rot.Yaw);
+			airotPkt.set_pitch(rot.Pitch);
+			airotPkt.set_roll(rot.Roll);
+
+			FVector loc = GetActorLocation();
+			airotPkt.set_x(loc.X);
+			airotPkt.set_y(loc.Y);
+			airotPkt.set_z(loc.Z);
+
+			GetNetworkManager()->SendPacket(airotPkt);
+		}
+	}
+	//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("%s"), *str));
+	//if (RecvAI)
+	//	RecvAI->RecvTest(str);
 	//To NetworkManger 
 	//switch
 }
@@ -251,6 +334,22 @@ void ATeam_AICharacterBase::SendTest(FString str)
 void ATeam_AICharacterBase::RecvTest(FString str)
 {
 }
+
+void ATeam_AICharacterBase::ActivateParticleSystem(FString str)
+{
+	UParticleSystemComponent* particleSystem = ParticleSystems[str];
+	if (!particleSystem)
+		return;
+	if (!particleSystem->Template)
+		return;
+	particleSystem->Activate(true);
+}
+
+const UParticleSystemComponent* ATeam_AICharacterBase::GetParticleSystemComponent(FString str) const
+{
+	return ParticleSystems[str];
+}
+
 
 float ATeam_AICharacterBase::GetDetectRadius()
 {
@@ -267,6 +366,11 @@ float ATeam_AICharacterBase::GetCurrentSpeed()
 	return SpeedCurrent;
 }
 
+void ATeam_AICharacterBase::SetCurrentSpeed(float speed)
+{
+	SpeedCurrent = speed;
+}
+
 bool ATeam_AICharacterBase::IsDead() const
 {
 	return AnimInstance ? AnimInstance->GetDead() : false;
@@ -277,3 +381,12 @@ bool ATeam_AICharacterBase::IsAttacking() const
 	return AnimInstance ? AnimInstance->GetAttacking() : false;
 }
 
+UNetworkManager* ATeam_AICharacterBase::GetNetworkManager() const
+{
+	return GetGameInstance()->GetSubsystem<UNetworkManager>();
+}
+
+void ATeam_AICharacterBase::SetCurHP(float hp)
+{
+	CurHp = hp;
+}

@@ -42,7 +42,7 @@ public:
 	static const FName TargetInRangeKey;
 	static const FName StateKey;
 	static const FName AttackDelayKey;
-	static const FName AttackAvailableKey;
+	//static const FName AttackAvailableKey;
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool IsServer;

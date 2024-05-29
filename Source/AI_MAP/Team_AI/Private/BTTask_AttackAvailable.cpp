@@ -21,6 +21,6 @@ EBTNodeResult::Type UBTTask_AttackAvailable::ExecuteTask(UBehaviorTreeComponent&
     UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
     if (!Blackboard)
         return EBTNodeResult::Failed;
-    Blackboard->SetValueAsBool(ATeam_AIController::AttackAvailableKey, true);
+    //Blackboard->SetValueAsBool(ATeam_AIController::AttackAvailableKey, true);
 	return EBTNodeResult::Succeeded;
 }

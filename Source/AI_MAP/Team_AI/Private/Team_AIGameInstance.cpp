@@ -3,6 +3,7 @@
 
 #include "Team_AIGameInstance.h"
 
+
 UTeam_AIGameInstance::UTeam_AIGameInstance()
 {
 	///Script/Engine.DataTable'/Game/CSVData/CharacterStatData.CharacterStatData'

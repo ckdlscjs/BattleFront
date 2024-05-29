@@ -21,6 +21,7 @@ public:
 protected:
 	UPROPERTY(EditAnywhere)
 	float AcceptanceRadius = 50.0f;
+
 private:
 
 };

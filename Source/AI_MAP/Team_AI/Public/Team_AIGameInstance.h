@@ -49,9 +49,8 @@ public:
 	FTeam_CharacterData* GetCharacterRowData(int32 Level);
 	UFUNCTION(BlueprintCallable)
 	int32 GetSizeCharacterDataTable() const;
-	
 private:
 	UPROPERTY()
 		UDataTable* CharcterDataTable;
-		
+
 };
