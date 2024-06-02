@@ -5,6 +5,7 @@
 #include "Components/SphereComponent.h"
 #include "GameCharacter.h"
 #include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystemComponent.h"
 #include "Engine/EngineTypes.h"
 // Sets default values
 AGrenadeFireArea::AGrenadeFireArea()
@@ -14,8 +15,8 @@ AGrenadeFireArea::AGrenadeFireArea()
 
 	SphereCollision = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere Collision"));
 	RootComponent = SphereCollision;
-	FireTestMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Test Mesh"));
-	FireTestMesh->SetupAttachment(RootComponent);
+	ParticleComponent = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Fire Particle"));
+	ParticleComponent->SetupAttachment(RootComponent);
 	DurationTime = 5.f;
 	Damage = 3.f;
 	RateToTime = 1.f;
@@ -25,9 +26,6 @@ AGrenadeFireArea::AGrenadeFireArea()
 void AGrenadeFireArea::BeginPlay()
 {
 	Super::BeginPlay();
-	/*SphereCollision->OnComponentBeginOverlap.AddDynamic(this, &AGrenadeFireArea::BeginOverlap);
-	SphereCollision->OnComponentEndOverlap.AddDynamic(this, &AGrenadeFireArea::EndOverlap);*/
-
 	GetWorldTimerManager().SetTimer(DamageTimerHandle, this, &AGrenadeFireArea::TakePlayerDamage, RateToTime, true);
 }
 

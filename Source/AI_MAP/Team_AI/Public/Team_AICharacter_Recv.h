@@ -23,8 +23,8 @@ public:
 	virtual void BeginPlay() override;
 	virtual void PostInitializeComponents() override;
 	bool RecvMoveTo(FVector loc, FRotator rot, float speed);
-	bool RecvAttack();
-	bool RecvAttackParticle();
+	bool RecvAttack(int32 idx = 0);
+	//bool RecvAttackParticle(); //NotUse
 	bool RecvRotate(FRotator rot);
 	bool RecvDead();
 protected:

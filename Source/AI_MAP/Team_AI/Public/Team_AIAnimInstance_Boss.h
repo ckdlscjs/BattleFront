@@ -4,6 +4,7 @@
 
 #include "Team_AIAnimInstance.h"
 #include "Team_AIAnimInstance_Boss.generated.h"
+/*
 DECLARE_MULTICAST_DELEGATE(FOnAttack1StartCheckDelegate);
 DECLARE_MULTICAST_DELEGATE(FOnAttack1EndCheckDelegate);
 DECLARE_MULTICAST_DELEGATE(FOnAttack2StartCheckDelegate);
@@ -14,8 +15,7 @@ DECLARE_MULTICAST_DELEGATE(FOnAttack4StartCheckDelegate);
 DECLARE_MULTICAST_DELEGATE(FOnAttack4EndCheckDelegate);
 DECLARE_MULTICAST_DELEGATE(FOnAttack5StartCheckDelegate);
 DECLARE_MULTICAST_DELEGATE(FOnAttack5EndCheckDelegate);
-DECLARE_MULTICAST_DELEGATE(FOnAttack2ParticleCheckDelegate);
-DECLARE_MULTICAST_DELEGATE(FOnAttack3ParticleCheckDelegate);
+*/
 /**
  * 
  */
@@ -24,7 +24,7 @@ class AI_MAP_API UTeam_AIAnimInstance_Boss : public UTeam_AIAnimInstance
 {
 	GENERATED_BODY()
 public:
-
+	UTeam_AIAnimInstance_Boss();
 protected:
 
 private:
@@ -52,6 +52,7 @@ private:
 	UFUNCTION()
 	void AnimNotify_Attack3ParticleCheck();
 
+
 	//UFUNCTION()
 	//void AnimNotify_Attack5StartCheck();
 	//UFUNCTION()
@@ -61,21 +62,22 @@ private:
 
 
 public:
-	FOnAttack1StartCheckDelegate OnAttack1Start;
+	/*FOnAttack1StartCheckDelegate OnAttack1Start;
 	FOnAttack1EndCheckDelegate OnAttack1End;
 	FOnAttack2StartCheckDelegate OnAttack2Start;
 	FOnAttack2EndCheckDelegate OnAttack2End;
 	FOnAttack3StartCheckDelegate OnAttack3Start;
 	FOnAttack3EndCheckDelegate OnAttack3End;
 	FOnAttack4StartCheckDelegate OnAttack4Start;
-	FOnAttack4EndCheckDelegate OnAttack4End;
-	FOnAttack2ParticleCheckDelegate OnAttack2Particle;
-	FOnAttack3ParticleCheckDelegate OnAttack3Particle;
+	FOnAttack4EndCheckDelegate OnAttack4End;*/
 	/*FOnAttack5StartCheckDelegate OnAttack5Start;
 	FOnAttack5EndCheckDelegate OnAttack5End;*/
 	
 protected:
-
+	UPROPERTY(EditAnywhere)
+	FTimerHandle BossAttackTimerHandle;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Attack4Delay;
 private:
 	
 };

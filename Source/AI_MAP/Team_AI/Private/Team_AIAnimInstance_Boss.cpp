@@ -2,67 +2,101 @@
 
 
 #include "Team_AIAnimInstance_Boss.h"
+#include "Team_AICharacter_Boss.h"
+#include "Particles/ParticleSystemComponent.h"
+
+UTeam_AIAnimInstance_Boss::UTeam_AIAnimInstance_Boss()
+{
+	Attack4Delay = 1.0f;
+}
 
 void UTeam_AIAnimInstance_Boss::AnimNotify_Attack1StartCheck()
 {
-	OnAttack1Start.Broadcast();
+	IsAttacking = true;
+	auto Boss = Cast<ATeam_AICharacter_Boss>(OwnerCharacter);
+	if (!Boss)
+		return;
+	Boss->SetAmountKnockback(0.0f);
+	Boss->SetMeleeAttackCollision(true);
 }
 
 void UTeam_AIAnimInstance_Boss::AnimNotify_Attack1EndCheck()
 {
 	IsAttacking = false;
-	OnAttack1End.Broadcast();
+	auto Boss = Cast<ATeam_AICharacter_Boss>(OwnerCharacter);
+	if (!Boss)
+		return;
+	Boss->SetAmountKnockback(0.0f);
+	Boss->SetMeleeAttackCollision(false);
 }
 void UTeam_AIAnimInstance_Boss::AnimNotify_Attack2StartCheck()
 {
-	OnAttack2Start.Broadcast();
+	IsAttacking = true;
+	//Send to Server Players(Tarray<AActor*>), CleanContainerData, InsertData
 }
 
 void UTeam_AIAnimInstance_Boss::AnimNotify_Attack2EndCheck()
 {
 	IsAttacking = false;
-	OnAttack2End.Broadcast();
 }
 
 void UTeam_AIAnimInstance_Boss::AnimNotify_Attack3StartCheck()
 {
-	OnAttack3Start.Broadcast();
+	IsAttacking = true;
+	auto Boss = Cast<ATeam_AICharacter_Boss>(OwnerCharacter);
+	if (!Boss)
+		return;
+	Boss->SetAmountKnockback(5000.0f);
+	Boss->SetMeleeAttackCollision(true);
 }
 
 void UTeam_AIAnimInstance_Boss::AnimNotify_Attack3EndCheck()
 {
 	IsAttacking = false;
-	OnAttack3End.Broadcast();
+	auto Boss = Cast<ATeam_AICharacter_Boss>(OwnerCharacter);
+	if (!Boss)
+		return;
+	Boss->SetAmountKnockback(0.0f);
+	Boss->SetMeleeAttackCollision(false);
 }
 
 void UTeam_AIAnimInstance_Boss::AnimNotify_Attack4StartCheck()
 {
-	OnAttack4Start.Broadcast();
+	IsAttacking = true;
+	GetWorld()->GetTimerManager().SetTimer
+	(
+		BossAttackTimerHandle,
+		[this]() -> void
+		{
+			
+			OwnerCharacter->ActivateParticleSystem(TEXT("Attack4"));
+			auto Boss = Cast<ATeam_AICharacter_Boss>(OwnerCharacter);
+			if (!Boss)
+				return;
+			Boss->Attack4();
+		},
+		Attack4Delay,
+		true,
+		0.0f
+	);
 }
 
 void UTeam_AIAnimInstance_Boss::AnimNotify_Attack4EndCheck()
 {
 	IsAttacking = false;
-	OnAttack4End.Broadcast();
+	GetWorld()->GetTimerManager().ClearTimer(BossAttackTimerHandle);
 }
 
 void UTeam_AIAnimInstance_Boss::AnimNotify_Attack2ParticleCheck()
 {
-	OnAttack2Particle.Broadcast();
+	if (!OwnerCharacter)
+		return;
+	OwnerCharacter->AttackParticletoActors(TEXT("Attack2"));
 }
 
 void UTeam_AIAnimInstance_Boss::AnimNotify_Attack3ParticleCheck()
 {
-	OnAttack3Particle.Broadcast();
+	if (!OwnerCharacter)
+		return;
+	OwnerCharacter->ActivateParticleSystem(TEXT("Attack3"));
 }
-
-//void UTeam_AIAnimInstance_Boss::AnimNotify_Attack5StartCheck()
-//{
-//	OnAttack5Start.Broadcast();
-//}
-
-//void UTeam_AIAnimInstance_Boss::AnimNotify_Attack5EndCheck()
-//{
-//	IsAttacking = false;
-//	OnAttack5End.Broadcast();
-//}

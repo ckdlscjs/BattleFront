@@ -28,6 +28,7 @@ private:
 		class USphereComponent* SphereComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		UStaticMeshComponent* StaticMesh;
+
 	UPROPERTY()
 		float Duration;
 	UPROPERTY()

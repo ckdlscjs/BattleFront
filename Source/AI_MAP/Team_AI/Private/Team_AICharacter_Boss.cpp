@@ -12,7 +12,7 @@
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/BlackboardComponent.h"
 //#include "BehaviorTree/BTTaskNode.h"
-//#include "GameCharacter.h"
+#include "GameCharacter.h"
 //#include "GameFramework/PawnMovementComponent.h"
 #include "Particles/ParticleSystemComponent.h"
 
@@ -25,9 +25,6 @@ ATeam_AICharacter_Boss::ATeam_AICharacter_Boss()
 	MeleeAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollision"));
 	MeleeAttackCollision->SetupAttachment(RootComponent);
 	MeleeAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	Amount_Knockback1 = 0.0f;
-	Amount_Knockback3 = 5000.0f;
-	Attack4Delay = 1.0f;
 	Attack4Radius = 500.0f;
 }
 
@@ -42,97 +39,6 @@ void ATeam_AICharacter_Boss::PostInitializeComponents()
 	RecognizeRange->OnComponentBeginOverlap.AddDynamic(this, &ATeam_AICharacter_Boss::OnBeginOverlap);
 	RecognizeRange->OnComponentEndOverlap.AddDynamic(this, &ATeam_AICharacter_Boss::OnEndOverlap);
 	MeleeAttackCollision->OnComponentBeginOverlap.AddDynamic(this, &ATeam_AICharacter_Boss::MeleeAttackCollisionBeginOverlap);
-	Cast<UTeam_AIAnimInstance_Boss>(AnimInstance)->OnAttack1Start.AddLambda([this]() -> void
-		{
-			AmountKnockback = Amount_Knockback1;
-			MeleeAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-		});
-	Cast<UTeam_AIAnimInstance_Boss>(AnimInstance)->OnAttack1End.AddLambda([this]() -> void
-		{
-			AmountKnockback = 0.0f;
-			MeleeAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);;
-		});
-
-	Cast<UTeam_AIAnimInstance_Boss>(AnimInstance)->OnAttack2Start.AddLambda([this]() -> void
-		{
-			for (const auto& actor : Players)
-			{
-				UGameplayStatics::ApplyDamage(actor, Attack, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
-			}
-		});
-	//Cast<UTeam_AIAnimInstance_Boss>(AnimInstance)->OnAttack2End.AddLambda([this]() -> void
-	//	{
-	//		MeleeAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	//	});
-
-	Cast<UTeam_AIAnimInstance_Boss>(AnimInstance)->OnAttack3Start.AddLambda([this]() -> void
-		{
-			AmountKnockback = Amount_Knockback3;
-			MeleeAttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-		});
-	Cast<UTeam_AIAnimInstance_Boss>(AnimInstance)->OnAttack3End.AddLambda([this]() -> void
-		{
-			AmountKnockback = 0.0f;
-			MeleeAttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		});
-
-	Cast<UTeam_AIAnimInstance_Boss>(AnimInstance)->OnAttack4Start.AddLambda([this]() -> void
-		{
-			GetWorldTimerManager().SetTimer
-			(
-				BossAttackTimerHandle,
-				[this]() -> void
-				{
-					TArray<FOverlapResult> OverlapResults;
-					FCollisionQueryParams CollisionQueryParam(NAME_None, false, this);
-
-					GetWorld()->OverlapMultiByProfile(OverlapResults, GetActorLocation(), FQuat::Identity, FName("PlayerCheck"), FCollisionShape::MakeSphere(Attack4Radius), CollisionQueryParam);
-					if (OverlapResults.Num())
-					{
-						for (const auto& iter : OverlapResults)
-						{
-							ActivateParticleSystem(TEXT("Attack4"));
-							UKismetSystemLibrary::PrintString(GetWorld(), FString(iter.GetActor()->GetName()), true, false);
-							DrawDebugLine(GetWorld(), GetActorLocation(), iter.GetActor()->GetActorLocation(), FColor::Red, false, 0.3f);
-							DrawDebugSphere(GetWorld(), GetActorLocation(), Attack4Radius, 16, FColor::Blue, false, 1.0f);
-						}
-					}
-				},
-				Attack4Delay,
-				true,
-				0.0f
-			);			
-		});
-	Cast<UTeam_AIAnimInstance_Boss>(AnimInstance)->OnAttack4End.AddLambda([this]() -> void
-		{
-			GetWorldTimerManager().ClearTimer(BossAttackTimerHandle);
-		});
-
-
-	/*Cast<UTeam_AIAnimInstance_Boss>(AnimInstance)->OnAttack5Start.AddLambda([this]() -> void
-		{
-			Attack4Scale = 0.0f;
-
-		});
-	Cast<UTeam_AIAnimInstance_Boss>(AnimInstance)->OnAttack5End.AddLambda([this]() -> void
-		{
-			Attack4Scale = 0.0f;
-
-		});*/
-
-	Cast<UTeam_AIAnimInstance_Boss>(AnimInstance)->OnAttack2Particle.AddLambda([this]() -> void
-		{
-			const UParticleSystemComponent* particleSystem = GetParticleSystemComponent(TEXT("Attack2"));
-			if (!particleSystem)
-				return;
-			for (const auto& actor : Players)
-				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), particleSystem->Template, actor->GetActorLocation(), particleSystem->GetRelativeRotation(), particleSystem->GetRelativeScale3D());
-		});
-	Cast<UTeam_AIAnimInstance_Boss>(AnimInstance)->OnAttack3Particle.AddLambda([this]() -> void
-		{
-			ActivateParticleSystem(TEXT("Attack3"));
-		});
-
 }
 
 void ATeam_AICharacter_Boss::BeginPlay()
@@ -176,6 +82,36 @@ int32 ATeam_AICharacter_Boss::GetRandomAttackIdx() const
 	return AnimInstance->GetAttackMontagesSize() ? UKismetMathLibrary::RandomIntegerInRangeFromStream(0, AnimInstance->GetAttackMontagesSize()-1, randVar) : 0;
 }
 
+const TArray<AActor*>& ATeam_AICharacter_Boss::GetRecognizePlayers() const
+{
+	return Players;
+}
+
+void ATeam_AICharacter_Boss::SetMeleeAttackCollision(bool enable)
+{
+	MeleeAttackCollision->SetCollisionEnabled(enable ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+}
+
+void ATeam_AICharacter_Boss::SetAmountKnockback(float value)
+{
+	AmountKnockback = value;
+}
+
+void ATeam_AICharacter_Boss::Attack4()
+{
+	TArray<FOverlapResult> OverlapResults;
+	FCollisionQueryParams CollisionQueryParam(NAME_None, false, this);
+	GetWorld()->OverlapMultiByProfile(OverlapResults, GetActorLocation(), FQuat::Identity, FName("PlayerCheck"), FCollisionShape::MakeSphere(Attack4Radius), CollisionQueryParam);
+	if (OverlapResults.Num())
+	{
+		for (const auto& iter : OverlapResults)
+		{
+			UGameplayStatics::ApplyDamage(iter.GetActor(), Attack, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
+			DrawDebugSphere(GetWorld(), GetActorLocation(), Attack4Radius, 16, FColor::Blue, false, 1.0f);
+		}
+	}
+}
+
 
 void ATeam_AICharacter_Boss::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
@@ -201,6 +137,20 @@ void ATeam_AICharacter_Boss::MeleeAttackCollisionBeginOverlap(UPrimitiveComponen
 	FVector dir = OtherActor->GetActorLocation() - GetActorLocation();
 	dir.Normalize();
 	dir.Z = 0.0f;
-	Cast<ACharacter>(OtherActor)->LaunchCharacter(dir*AmountKnockback, false, false);
+	dir = dir * AmountKnockback;
+	auto player = Cast<ACharacter>(OtherActor);
+	Cast<ACharacter>(OtherActor)->LaunchCharacter(dir, false, false);
 	UGameplayStatics::ApplyDamage(OtherActor, Attack, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
+
+	//TODO : 캐릭터가 밀리는 넉백 패킷
+	// boss id ,target id, dir*AmountKnockback
+	Protocol::C_AI_KNOCKS_BACK knokbackPkt;
+	{
+		knokbackPkt.set_object_id(pos.object_id());
+		knokbackPkt.set_target_id(Cast<AGameCharacter>(OtherActor)->PlayerInfo->object_id());
+		knokbackPkt.set_vx(dir.X);
+		knokbackPkt.set_vy(dir.Y);
+		knokbackPkt.set_vz(dir.Z);
+	}
+	GetNetworkManager()->SendPacket(knokbackPkt);
 }

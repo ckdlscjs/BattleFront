@@ -29,5 +29,8 @@ public:
 	
 	virtual void Attack(FVector& Location) override;
 	virtual void SetLocation(FVector& Location)override;
-	 
+private:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		class UNiagaraSystem* HitParticles;
 };

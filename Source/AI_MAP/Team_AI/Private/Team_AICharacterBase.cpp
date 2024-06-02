@@ -17,6 +17,7 @@
 #include "GameFramework/PawnMovementComponent.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Team_AIGameMode.h"
+#include "Materials/MaterialInstance.h"
 
 // Sets default values
 ATeam_AICharacterBase::ATeam_AICharacterBase()
@@ -32,7 +33,7 @@ ATeam_AICharacterBase::ATeam_AICharacterBase()
 	GetMesh()->SetRelativeRotation({ 0.0f, -90.0f, 0.0f });*/
 	TargetTag = "PlayerController";
 	AttackRange = 500.0f;
-	AttackSpeed = 1.0f;
+	AnimationSpeed = 1.0f;
 	AttackDelay = 3.0f;
 	DetectRadius = 1000.0f;
 	PatrolRadius = 3000.0f;
@@ -49,6 +50,7 @@ ATeam_AICharacterBase::ATeam_AICharacterBase()
 	//AttackParticleSystem = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("AttackParticleSystem"));
 	//AttackParticleSystem->SetupAttachment(RootComponent);
 	//AttackParticleSystem->bAutoActivate = false;
+	HitOverlayTime = 1.0f;
 }
 
 // Called when the game starts or when spawned
@@ -57,7 +59,7 @@ void ATeam_AICharacterBase::BeginPlay()
 	Super::BeginPlay();
 	for (const auto& iter : K2_GetComponentsByClass(UParticleSystemComponent::StaticClass()))
 		ParticleSystems.Add(TTuple<FString, UParticleSystemComponent*>(iter->GetName(), Cast<UParticleSystemComponent>(iter)));
-		
+	BehviorSpawn();
 	//TODO : GetGameLevel
 	SetStat(Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()))->GetGameLevel());
 	ATeam_AIController* AIController = Cast<ATeam_AIController>(GetController());
@@ -68,10 +70,28 @@ void ATeam_AICharacterBase::BeginPlay()
 
 void ATeam_AICharacterBase::TakenDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
 {
+	if (HitOverlayMaterial)
+		GetMesh()->SetOverlayMaterial(HitOverlayMaterial);
+
+	FTimerHandle OverlayHandle;
+	GetWorldTimerManager().SetTimer
+	(
+		OverlayHandle,
+		[&]() -> void
+		{
+			GetMesh()->SetOverlayMaterial(nullptr);
+			GetWorldTimerManager().ClearTimer(OverlayHandle);
+		},
+		HitOverlayTime,
+		false
+	);
+
 	if (GetNetworkManager()->GameMode->GetMyPlayer()->PlayerInfo->object_id() == 1)
 	{
 		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("TakenDamage:%f"), Damage));
 		CurHp -= Damage;
+
+	
 		Protocol::C_AIDAMAGED AIDmgedPkt;
 		{
 			AIDmgedPkt.set_object_id(pos.object_id());
@@ -149,7 +169,6 @@ void ATeam_AICharacterBase::PostInitializeComponents()
 	AnimInstance->OnDead.AddLambda([this]() -> void
 		{
 			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("LambdaDead!!!!!!!!!!!!!!!!!!!!!")));
-			Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()))->DeleteSpawnActor(this);
 			auto gm = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 			gm->SetAIDespawn(pos.object_id());
 			Destroy();
@@ -164,7 +183,10 @@ void ATeam_AICharacterBase::PostInitializeComponents()
 				return;
 			BehaviorTree->OnTaskFinished(Cast<UBTTaskNode>(BehaviorTree->GetActiveNode()), EBTNodeResult::Succeeded);
 		});
-
+	AnimInstance->OnSpawnParticle.AddLambda([this]() -> void
+		{
+			ActivateParticleSystem(TEXT("Spawn"));
+		});
 }
 
 // Called to bind functionality to input
@@ -195,18 +217,18 @@ void ATeam_AICharacterBase::BehaviorAttack(int idx)
 {
 	if (IsDead())
 		return;
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Attacking!!")), true, false, FColor::Red);
+	//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Attacking!!")), true, false, FColor::Red);
 	//TODO : Attak
 	if (AnimInstance)
-		AnimInstance->PlayAttackMontage(AttackSpeed, idx);
+		AnimInstance->PlayAttackMontage(AnimationSpeed, idx);
 }
 
 void ATeam_AICharacterBase::BehaviorDead()
 {
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Dead!!")), true, false, FColor::Red);
+	//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Dead!!")), true, false, FColor::Red);
 	//TODO : 사망
 	if (AnimInstance)
-		AnimInstance->PlayDeadMontage(AttackSpeed);
+		AnimInstance->PlayDeadMontage(AnimationSpeed);
 	ATeam_AIController* AIController = Cast<ATeam_AIController>(GetOwner());
 	if (!AIController)
 		return;
@@ -216,6 +238,15 @@ void ATeam_AICharacterBase::BehaviorDead()
 	BehaviorTree->StopTree();
 }
 
+
+void ATeam_AICharacterBase::BehviorSpawn()
+{
+	if (IsDead())
+		return;
+	if (AnimInstance)
+		if(AnimInstance->PlaySpawnMontage(AnimationSpeed) < 0)
+			ActivateParticleSystem(TEXT("Spawn"));
+}
 
 void ATeam_AICharacterBase::OnDeadMontageEnd(UAnimMontage* Montage, bool bInterrupted)
 {
@@ -266,7 +297,7 @@ ECharacterState ATeam_AICharacterBase::GetCurrentState()
 	return CurrentState;
 }
 
-void ATeam_AICharacterBase::SendTest(FString str)
+void ATeam_AICharacterBase::SendTest(FString str, int idx)
 {
 	if (str == "MoveTo")
 	{
@@ -302,6 +333,7 @@ void ATeam_AICharacterBase::SendTest(FString str)
 		Protocol::C_AIATTACK aiAttackPkt;
 		{
 			aiAttackPkt.set_object_id(pos.object_id());
+			aiAttackPkt.set_attack_idx(idx);
 			GetNetworkManager()->SendPacket(aiAttackPkt);
 		}
 	}
@@ -348,6 +380,16 @@ void ATeam_AICharacterBase::ActivateParticleSystem(FString str)
 const UParticleSystemComponent* ATeam_AICharacterBase::GetParticleSystemComponent(FString str) const
 {
 	return ParticleSystems[str];
+}
+
+void ATeam_AICharacterBase::AttackParticletoActors(FString str)
+{
+	for (const auto& actor : Players)
+	{
+		UGameplayStatics::ApplyDamage(actor, Attack, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
+		if (!str.IsEmpty() && ParticleSystems[str]->Template)
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystems[str]->Template, actor->GetActorLocation(), ParticleSystems[str]->GetRelativeRotation(), ParticleSystems[str]->GetRelativeScale3D());
+	}
 }
 
 

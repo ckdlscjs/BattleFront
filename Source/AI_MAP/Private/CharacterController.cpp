@@ -15,6 +15,8 @@
 #include "Weapon.h"
 #include "Engine/EngineTypes.h"
 #include "Components/CapsuleComponent.h"
+#include "Kismet/KismetMaterialLibrary.h"
+#include "Materials/MaterialParameterCollection.h"
 
 // Server
 #include "NetworkManager.h"
@@ -25,11 +27,13 @@
 void ACharacterController::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	// Handle_S_ENTER_GAME 에서 자신이 조종하는 캐릭터를 생성 시 주석
 	GameCharacter = Cast<AGameCharacter>(GetPawn());
-	if (GameCharacter == nullptr)
-	{
-		return;
-	}
+	//if (GameCharacter == nullptr)
+	//{
+	//	return;
+	//}
 	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
 	if (Subsystem != nullptr)
 	{
@@ -47,7 +51,10 @@ void ACharacterController::Tick(float DeltaTime)
 	}
 	FHitResult Result;
 	GetHitResultLoc(Result);
-	
+
+	if (GameCharacter == nullptr)
+		return;
+
 	FVector Forward = GameCharacter->GetActorForwardVector();
 	FVector HitLoc = Result.Location;
 	FVector ActorLoc = GameCharacter->GetActorLocation();
@@ -55,9 +62,10 @@ void ACharacterController::Tick(float DeltaTime)
 	Temp.Z = Forward.Z;
 	FRotator rot = UKismetMathLibrary::FindLookAtRotation(Forward, Temp);
 	GameCharacter->SetActorRotation(rot);
+	GameCharacter->DesRot = GameCharacter->GetActorRotation();
 
 	//Server
-	/*
+	
 	if (GameCharacter->DesiredInput == FVector2D::Zero())
 	{
 		GameCharacter->SetMoveState(Protocol::MOVE_STATE_IDLE);
@@ -76,7 +84,7 @@ void ACharacterController::Tick(float DeltaTime)
 
 		Protocol::PosInfo* Info = MovePkt.mutable_info();
 		Info->set_object_id(GameCharacter->PlayerInfo->object_id());
-
+		GameCharacter->DesLoc = GameCharacter->GetActorLocation();
 		Info->set_x(GameCharacter->DesLoc.X);
 		Info->set_y(GameCharacter->DesLoc.Y);
 		Info->set_z(GameCharacter->DesLoc.Z);
@@ -93,7 +101,10 @@ void ACharacterController::Tick(float DeltaTime)
 
 		GetNetworkManager()->SendPacket(MovePkt);
 	}
-	*/
+
+	//bush
+	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), FMC_Fade, TEXT("PlayerPos"), UKismetMathLibrary::Conv_VectorToLinearColor(GameCharacter->GetActorLocation()));
+	UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), FMC_Fade, TEXT("BushDist"), 1000.0f);
 }
 void ACharacterController::SetupInputComponent()
 {
@@ -296,7 +307,11 @@ void ACharacterController::CameraRotationReset(const FInputActionValue& Value)
 void ACharacterController::AbilityChoose(const FInputActionValue& Value)
 {
 	FVector Select = Value.Get<FVector>();
-
+	bool isCharacterUp = GameCharacter->GetIsLevelUp();
+	if (isCharacterUp == false)
+	{
+		return;
+	}
 	FVector First(1, 0, 0);
 	FVector Second(0, 1, 0);
 	FVector Third(0, 0, 1);
@@ -403,3 +418,7 @@ UNetworkManager* ACharacterController::GetNetworkManager() const
 	return GetGameInstance()->GetSubsystem<UNetworkManager>();
 }
 
+void ACharacterController::SetCharacter(AGameCharacter* player)
+{
+	GameCharacter = player;
+}

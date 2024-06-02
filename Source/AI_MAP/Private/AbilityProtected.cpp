@@ -8,7 +8,7 @@ AAbilityProtected::AAbilityProtected()
 	MyAbilityLevel = 0;
 	AbilityPoint = 10.f;
 	GuardPoint = ((MyAbilityLevel + 1) * 5) + AbilityPoint;
-	CoolTime = 20.f;
+	CoolTime = 30.f;
 	Type = AbilityType::Guard;
 }
 

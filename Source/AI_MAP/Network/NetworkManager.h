@@ -26,6 +26,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void DisconnectFromGameServer();
+	void ExitGame();
 
 	UFUNCTION(BlueprintCallable)
 	void HandleRecvPackets();
@@ -42,6 +43,7 @@ public:
 
 	void HandleDespawn(uint64 ObjectId);
 	void HandleDespawn(const Protocol::S_DESPAWN& DespawnPkt);
+	void HandleLeaveGame(const Protocol::S_LEAVE_GAME& leavePkt);
 
 	void HandleMove(const Protocol::S_MOVE& MovePkt);
 
@@ -50,10 +52,20 @@ public:
 	void HandleDamaged(const Protocol::S_DAMAGED& dmgPkt);
 	void HandleDead(const Protocol::S_PLAYERDEAD& playerDeadPkt);
 
+	void HandleSkillRange(const Protocol::S_PLAYERSKILL_RANGE& rangeSkillPkt);
+	void HandleSkillGuard(const Protocol::S_PLAYERSKILL_GUARD& rangeSkillPkt);
+	void HandleSkillHeal(const Protocol::S_PLAYERSKILL_HEAL& rangeSkillPkt);
+	void HandleHealed(const Protocol::S_PLAYERHEAL& healpkt);
+
+	void HandleMakeDrone(const Protocol::S_MAKEDRONE& makeDrnPkt);
+	void HandleSearchDrone(const Protocol::S_SEARCHDRONE& searchDrnPkt);
+	void HandleMoveDrone(const Protocol::S_MOVEDRONE& moveDrnPkt);
+	void HandleReturnDrone(const Protocol::S_RETURNDRONE& retDrnPkt);
 	// AI
-	void HandleAISpawn(const Protocol::ObjectInfo& AiInfo);
-	void HandleAISpawn(const Protocol::S_AISPAWNRANDOM& AiRandomSpawnPkt);
-	void HandleAISpawn(const Protocol::S_AISPAWNPATROL& AiPatrolSpawnPkt);
+	/*void HandleAISpawn(const Protocol::ObjectInfo& AiInfo);*/
+	void HandleAISpawn(const Protocol::S_AISPAWN_RANDOM& AiSpawnPkt);
+	void HandleAISpawn(const Protocol::S_AISPAWN_PATROL& AiSpawnPkt);
+	void HandleAISpawn(const Protocol::S_AISPAWN_BOSS& AiSpawnPkt);
 
 	void HandleAIMove(const Protocol::S_AIMOVE& AIMovePkt);
 	void HandleAIMoveStop(const Protocol::S_AIMOVESTOP& AIMoveStopPkt);
@@ -63,6 +75,7 @@ public:
 	void HandleAISpawnProjectile(const Protocol::S_AIPROJSPAWN& AIProjPkt);
 	void HandleAIDamaged(const Protocol::S_AIDAMAGED& AIDmgedPkt);
 	void HandleAIDead(const Protocol::S_AIDEAD& AIDeadPkt);
+	void HandleAIKnocksBack(const Protocol::S_AI_KNOCKS_BACK& AIKnocksBock);
 public:
 	// GameServer
 	class FSocket* Socket;

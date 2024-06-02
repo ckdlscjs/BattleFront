@@ -9,6 +9,7 @@
 /**
  * 
  */
+
 UCLASS()
 class AI_MAP_API AAbilityDrone : public AAbilityBase
 {
@@ -22,7 +23,11 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetLocation(FVector& Location) override;
-	void FindEnemy(TArray<AActor*> Actors);
+	virtual DroneState GetDroneState() override;
+	virtual void SetDroneStateReturn()override;
+	virtual void ReturnDrone(FVector& Location)override;
+	virtual void SetDroneNoneState()override;
+	void Attack();
 	bool MoveToTarget();
 	void ChangeAttackStatus(bool bChange);
 	bool GetAttackState();
@@ -39,6 +44,8 @@ private:
 		float Speed;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", meta = (AllowPrivateAccess = "true"))
 		FVector TargetLocation;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", meta = (AllowPrivateAccess = "true"))
+		DroneState State;
 	UPROPERTY()
 		float TargetDistance;
 	UPROPERTY()

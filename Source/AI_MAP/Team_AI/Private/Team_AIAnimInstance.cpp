@@ -13,12 +13,20 @@ UTeam_AIAnimInstance::UTeam_AIAnimInstance()
 	IsDead = false;
 }
 
+void UTeam_AIAnimInstance::NativeBeginPlay()
+{
+	Super::NativeBeginPlay();
+	OwnerCharacter = Cast<ATeam_AICharacterBase>(GetOwningActor());
+}
+
 void UTeam_AIAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
-	auto Pawn = TryGetPawnOwner();
+	/*auto Pawn = TryGetPawnOwner();
 	if (IsValid(Pawn))
-		CurrentPawnSpeed = Cast<ATeam_AICharacterBase>(Pawn)->GetCurrentSpeed();
+		CurrentPawnSpeed = Cast<ATeam_AICharacterBase>(Pawn)->GetCurrentSpeed();*/
+	if(OwnerCharacter)
+		CurrentPawnSpeed = OwnerCharacter->GetCurrentSpeed();
 }
 
 float UTeam_AIAnimInstance::PlayAttackMontage(float PlayRate, int idx)
@@ -36,6 +44,11 @@ float UTeam_AIAnimInstance::PlayDeadMontage(float PlayRate)
 {
 	IsDead = true;
 	return Montage_Play(DeadMontage, PlayRate);
+}
+
+float UTeam_AIAnimInstance::PlaySpawnMontage(float PlayRate)
+{
+	return SpawnMontage ? Montage_Play(SpawnMontage, PlayRate) : -1.0f;
 }
 
 bool UTeam_AIAnimInstance::GetAttacking() const
@@ -77,5 +90,10 @@ void UTeam_AIAnimInstance::AnimNotify_DeadCheck()
 void UTeam_AIAnimInstance::AnimNotify_AttackParticleCheck()
 {
 	OnAttackParticle.Broadcast();
+}
+
+void UTeam_AIAnimInstance::AnimNotify_SpawnParticleCheck()
+{
+	OnSpawnParticle.Broadcast();
 }
 

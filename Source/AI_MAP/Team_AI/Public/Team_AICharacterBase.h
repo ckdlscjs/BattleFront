@@ -54,9 +54,13 @@ public:
 	float GetAttackDelay() const;
 	float GetDetectRadius();
 	float GetPatrolRadius();
+	UFUNCTION(BlueprintCallable, CallInEditor)
 	virtual void BehaviorAttack(int idx = 0);
 	UFUNCTION(BlueprintCallable, CallInEditor)
 	void BehaviorDead();
+
+	UFUNCTION(BlueprintCallable, CallInEditor)
+	void BehviorSpawn();
 	UFUNCTION()
 	void OnDeadMontageEnd(UAnimMontage* Montage, bool bInterrupted);
 	UFUNCTION(BlueprintCallable)
@@ -74,7 +78,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	ECharacterState GetCurrentState();
 	UFUNCTION(BlueprintCallable)
-	virtual void SendTest(FString str);
+	virtual void SendTest(FString str, int idx = 0);
 	UFUNCTION(BlueprintCallable)
 	virtual void RecvTest(FString str);
 
@@ -83,7 +87,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	virtual const class UParticleSystemComponent* GetParticleSystemComponent(FString str) const;
-	
+
+	UFUNCTION(BlueprintCallable)
+	virtual void AttackParticletoActors(FString str = "");
 protected:
 
 private:
@@ -100,7 +106,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float AttackDelay;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float AttackSpeed;
+		float AnimationSpeed;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float DetectRadius;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -151,6 +157,13 @@ protected:
 		TMap<FString, class UParticleSystemComponent*> ParticleSystems;
 	/*UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		ATeam_AICharacterBase* RecvAI;*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UMaterialInstance* HitOverlayMaterial;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float HitOverlayTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<AActor*> Players;
 private:
 
 

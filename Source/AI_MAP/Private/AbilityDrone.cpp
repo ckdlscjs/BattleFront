@@ -9,6 +9,9 @@
 #include "DroneAttackRange.h"
 #include "DrawDebugHelpers.h"
 #include "AI_MAP.h"
+#include "Team_AIGameMode.h"
+#include "GameCharacter.h"
+
 AAbilityDrone::AAbilityDrone()
 {
 	SphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere Component"));
@@ -25,6 +28,7 @@ AAbilityDrone::AAbilityDrone()
 	MyAbilityLevel = 0;
 	CoolTime = 8.f;
 	Type = AbilityType::Drone;
+	State = DroneState::None;
 }
 
 void AAbilityDrone::BeginPlay()
@@ -35,20 +39,16 @@ void AAbilityDrone::BeginPlay()
 void AAbilityDrone::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
 	MY_DeltaTime = DeltaTime;
 
-	if (bAttack == true)
+	if (Cast<AGameCharacter>(GetOwner()) == Cast<ATeam_AIGameMode>(GetWorld()->GetAuthGameMode())->GetMyPlayer())
 	{
-		if (MoveToTarget())
+		if (State == DroneState::Search)
 		{
-			UKismetSystemLibrary::PrintString(GetWorld(), FString(TEXT("Shoot")));
-			FVector Loc = GetActorLocation();
-			Loc.Z = 0.f;
-			UGameplayStatics::ApplyRadialDamage(GetWorld(), Damage, Loc, 200.f, nullptr, TArray<AActor*>(),this,false, true);
-			//DrawDebugSphere(GetWorld(), Loc, 200.f, 26, FColor(181, 0, 0), true, -1, 0, 2);
-
-			bAttack = false;
+			if (MoveToTarget())
+			{
+				Attack();
+			}
 		}
 	}
 }
@@ -62,18 +62,47 @@ void AAbilityDrone::SetLocation(FVector& Location)
 	float Y_Min = Location.Y - 500.f;
 	float X_Rand = FMath::FRandRange(X_Min, X_Max);
 	float Y_Rand = FMath::FRandRange(Y_Min, Y_Max);
-	TargetLocation = FVector(X_Rand, Y_Rand, Location.Z);	
+	if (State != DroneState::Return)
+	{
+		State = DroneState::Search;
+		TargetLocation = FVector(X_Rand, Y_Rand, Location.Z);
+	}
+	else if (State == DroneState::Return)
+	{
+		TargetLocation = Location;
+	}
+	
+	
 	TargetDistance = (TargetLocation - StartLocation).Size();
 	//DrawDebugSphere(GetWorld(), TargetLocation, 200, 26, FColor(181, 0, 0), true, -1, 0, 2);
 	Direction = (TargetLocation - GetActorLocation()).GetSafeNormal();
-	bAttack = true;
 	CurrentDistance = 0.f;
 }
 
-
-void AAbilityDrone::FindEnemy(TArray<AActor*> Actors)
+DroneState AAbilityDrone::GetDroneState()
 {
+	return State;
+}
 
+void AAbilityDrone::SetDroneStateReturn()
+{
+	State = DroneState::Return;
+}
+
+void AAbilityDrone::ReturnDrone(FVector& Location)
+{
+}
+
+void AAbilityDrone::SetDroneNoneState()
+{
+	State = DroneState::None;
+}
+
+void AAbilityDrone::Attack()
+{
+	FVector Loc = GetActorLocation();
+	Loc.Z = 0.f;
+	UGameplayStatics::ApplyRadialDamage(GetWorld(), Damage, Loc, 200.f, nullptr, TArray<AActor*>(), this, false, true);
 }
 
 bool AAbilityDrone::MoveToTarget()
@@ -84,8 +113,33 @@ bool AAbilityDrone::MoveToTarget()
 		CurrentLocation += Direction * Speed * MY_DeltaTime;
 		SetActorLocation(CurrentLocation);
 		CurrentDistance = (CurrentLocation - StartLocation).Size();
+
+		//TODO : MoveDronePkt;
+		// OwnerID, CurrentLocation
+
+		Protocol::C_MOVEDRONE drnMovePkt;
+		{
+			auto player = Cast<AGameCharacter>(GetOwner());
+			drnMovePkt.set_object_id(player->PlayerInfo->object_id());
+			drnMovePkt.set_x(CurrentLocation.X);
+			drnMovePkt.set_y(CurrentLocation.Y);
+			drnMovePkt.set_z(CurrentLocation.Z);
+		}
+		GetNetworkManager()->SendPacket(drnMovePkt);
+
 		return false;
-	}	
+	}
+	else
+	{
+		if (State != DroneState::Return)
+		{
+			State = DroneState::Attack;
+		}
+		else
+		{
+			State = DroneState::Search;
+		}
+	}
 	return true;
 }
 

@@ -28,7 +28,16 @@ public:
 	bool RecognizePlayers();
 	UFUNCTION(BlueprintCallable)
 	int32 GetRandomAttackIdx() const;
-	
+	UFUNCTION(BlueprintCallable)
+	const TArray<AActor*>& GetRecognizePlayers() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetMeleeAttackCollision(bool enable);
+	UFUNCTION(BlueprintCallable)
+	void SetAmountKnockback(float value);
+	UFUNCTION(BlueprintCallable)
+	void Attack4();
+
 protected:
 private:
 	UFUNCTION()
@@ -41,23 +50,16 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	USphereComponent* RecognizeRange;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<AActor*> Players;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//TArray<AActor*> Players;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FRandomStream randVar;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UBoxComponent* MeleeAttackCollision;
 
 	float AmountKnockback;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Amount_Knockback1;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Amount_Knockback3;
 
-	UPROPERTY(EditAnywhere)
-	FTimerHandle BossAttackTimerHandle;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	float Attack4Delay;
+
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	float Attack4Radius;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

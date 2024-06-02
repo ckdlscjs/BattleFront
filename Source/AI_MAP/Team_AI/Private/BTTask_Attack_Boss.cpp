@@ -22,8 +22,9 @@ EBTNodeResult::Type UBTTask_Attack_Boss::ExecuteTask(UBehaviorTreeComponent& Own
         return EBTNodeResult::Failed;
     /*if (!Blackboard->GetValueAsBool(ATeam_AIController::AttackAvailableKey))
         return EBTNodeResult::Failed;*/
-    AICharacter->BehaviorAttack(AICharacter->GetRandomAttackIdx());
-    AICharacter->SendTest("Attack");
+    int AttackIdx = AICharacter->GetRandomAttackIdx();
+    AICharacter->BehaviorAttack(AttackIdx);
+    AICharacter->SendTest("Attack", AttackIdx);
     //Blackboard->SetValueAsBool(ATeam_AIController::AttackAvailableKey, false);
     return EBTNodeResult::InProgress;
 }

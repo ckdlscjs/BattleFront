@@ -33,6 +33,8 @@ protected:
 	TSubclassOf<class ATeam_AICharacterBase> EnemyClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<class ATeam_AICharacterBase> AIClassRecv;
+	UPROPERTY(VisibleAnywhere , BlueprintReadWrite)
+	FVector GroundLocation;
 private:
 
 };

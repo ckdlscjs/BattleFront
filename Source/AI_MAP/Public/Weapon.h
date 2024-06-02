@@ -29,6 +29,8 @@ public:
 	virtual void Shot();
 	FVector GetSpawnPointLocation();
 	FVector GetSpawnPointForwardVec();
+	UFUNCTION(BlueprintCallable)
+	void SetVisibility(bool visible);
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = true))

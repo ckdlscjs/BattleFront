@@ -22,38 +22,43 @@ public:
 
 	virtual void StartPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
+
+	virtual void Logout(AController* Exiting) override;
 public:
 	UFUNCTION(BlueprintCallable)
 	void SpawnEnemyRandom();
 	UFUNCTION(BlueprintCallable)
 	void SpawnEnemyPatrol();
+
+	UFUNCTION(BlueprintCallable)
+	void SpawnEnemyBoss();
 	UFUNCTION(BlueprintCallable)
 	int32 GetGameLevel() const;
-	UFUNCTION(BlueprintCallable)
-	void AddSpawnActor(AActor* actor);
+	void AddSpawnActor(const Protocol::S_AISPAWN_RANDOM& AiSpawnPkt);
+	void AddSpawnActor(const Protocol::S_AISPAWN_PATROL& AiSpawnPkt);
+	void AddSpawnActor(const Protocol::S_AISPAWN_BOSS& AiSpawnPkt);
 
-	UFUNCTION(BlueprintCallable)
-	void DeleteSpawnActor(AActor* actor);
-
-	void AddSpawnActor(const Protocol::ObjectInfo& AiInfo);
-	void AddSpawnActor(const Protocol::S_AISPAWNRANDOM& AiRandomSpawnPkt);
-
-	void DeleteSpawnActor(const Protocol::ObjectInfo& AiInfo);
 	UFUNCTION(BlueprintCallable)
 	float GetDurationSpawnEnemyRandom() const;
 	UFUNCTION(BlueprintCallable)
 	float GetDurationSpawnEnemyPatrol() const;
 
-	class AAbilityManager* GetAbilityManager();
 	//--------ServerFunctions----------
 	//Players
-	const TMap<uint64, AGameCharacter*>& GetPlayers() const;
+	TMap<uint64, AGameCharacter*>& GetPlayers();
 	void SetPlayerInfo(bool isMine, const Protocol::PosInfo& Info);
 	const TObjectPtr<AGameCharacter>& GetMyPlayer() const;
 	void SetPlayerMove(const Protocol::S_MOVE& MovePkt);
 	void SetPlayerAttack(const Protocol::S_FIRE& FirePkt);
 	void SetPlayerDamaged(const Protocol::S_DAMAGED& dmgPkt);
 	void SetPlayerDead(const Protocol::S_PLAYERDEAD& playerDeadPkt);
+	void SetPlayerSKill(const Protocol::S_PLAYERSKILL_RANGE& rangePkt);
+	void SetPlayerSKill(const Protocol::S_PLAYERSKILL_GUARD& guardPkt);
+	void SetPlayerSKill(const Protocol::S_PLAYERSKILL_HEAL& healPkt);
+	void SetUpdatedHeal(const Protocol::S_PLAYERHEAL& healPkt);
+	void SetMakeDrone(const Protocol::S_MAKEDRONE& makeDrnPkt);
+	void SetSearchDrone(const Protocol::S_SEARCHDRONE& searchDrnPkt);
+	void SetMoveDrone(const Protocol::S_MOVEDRONE& moveDrnPkt);
 
 	//Enemies
 	const TMap<uint64, ATeam_AICharacterBase*>& GetEnemies() const;
@@ -66,6 +71,7 @@ public:
 	void SetAIDamaged(const Protocol::S_AIDAMAGED& AIDmgedPkt);
 	void SetAIDead(const Protocol::S_AIDEAD& AIDeadPkt);
 	void SetAIDespawn(uint64 objectID);
+	void SetKnocksBack(const Protocol::S_AI_KNOCKS_BACK& AIKnocksBackPkt);
 protected:
 	UPROPERTY(VisibleAnywhere)
 	TArray<AActor*> SpawnPoints_Random;
@@ -73,8 +79,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<AActor*> PatrolRoutes;
 
-	//UPROPERTY(VisibleAnywhere)
-	//TSet<AActor*> Enemies;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<AActor*> SpawnPoints_Boss;
 
 	UPROPERTY(VisibleAnywhere)
 	int32 GameLevel;
@@ -84,6 +90,8 @@ protected:
 	UPROPERTY(EditAnywhere)
 	float Duration_SpawnEnemyPatrol;
 	UPROPERTY(EditAnywhere)
+	float Duration_SpawnEnemyBoss;
+	UPROPERTY(EditAnywhere)
 	float Duration_GameLevel;
 	UPROPERTY(EditAnywhere)
 	FTimerHandle TimerHandle_GameLevel;
@@ -91,6 +99,9 @@ protected:
 	FTimerHandle TimerHandle_SpawnRandom;
 	UPROPERTY(EditAnywhere)
 	FTimerHandle TimerHandle_SpawnPatrol;
+
+	UPROPERTY(EditAnywhere)
+	FTimerHandle TimerHandle_SpawnBoss;
 	
 
 	UPROPERTY()
@@ -102,19 +113,10 @@ protected:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<AGameCharacter> PlayerClass;
 
-	//UPROPERTY()
+	UPROPERTY()
 	TMap<uint64, ATeam_AICharacterBase*> Enemies;
-
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<ATeam_AICharacterBase> AIClass;
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<ATeam_AICharacterBase> AIClassRecv;
-
-	UPROPERTY(EditAnywhere)
-	TArray<TSubclassOf<ATeam_AICharacterBase>> AIClassesSend;
-	UPROPERTY(EditAnywhere)
-	TArray<TSubclassOf<ATeam_AICharacterBase>> AIClassesRecv;
-
+	UPROPERTY()
+	ATeam_AICharacterBase* Boss;
 
 	UPROPERTY(EditAnywhere)
 	TArray<TSubclassOf<AProjectile>> ClassesProjectiles;
@@ -126,20 +128,17 @@ protected:
 	UPROPERTY()
 	TMap<uint64, ATeam_AIProjectileBase*> Projectiles_Enemies;
 
-private:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Manager", meta = (AllowPrivateAccess = "true"))
-		TSubclassOf<class AAbilityManager> AbilityManagerClass;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		class AAbilityManager* AbilityManager;
-
-
-	void SpawnAbilityManager();
 // Server
 public:
 	UNetworkManager* GetNetworkManager() const;
 	void InitializeStartPlay();
 	TArray<TSubclassOf<ATeam_AIProjectileBase>>& GetAIProjClasses();
 	int64 WinnerCheck();
+
+	ATeam_AICharacterBase* GetBoss();
+
+	//virtual void Logout(AController* Exiting) override;
+
 };
 
 

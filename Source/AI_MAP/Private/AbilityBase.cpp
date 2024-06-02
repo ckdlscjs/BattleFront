@@ -83,3 +83,8 @@ void AAbilityBase::AbilityLevelUp()
 	MyAbilityLevel++;
 }
 
+UNetworkManager* AAbilityBase::GetNetworkManager() const
+{
+	return GetGameInstance()->GetSubsystem<UNetworkManager>();
+}
+

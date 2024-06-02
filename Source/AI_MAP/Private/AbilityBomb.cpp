@@ -7,7 +7,8 @@
 #include "Math/UnrealMathUtility.h"
 #include "DrawDebugHelpers.h"
 #include "GameFramework/ProjectileMovementComponent.h"
-#include "AI_MAP.h"
+#include "NiagaraFunctionLibrary.h"
+
 AAbilityBomb::AAbilityBomb()
 {
 	CapsuleCompoent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CapsuleCompoent"));
@@ -33,12 +34,14 @@ void AAbilityBomb::BeginPlay()
 
 void AAbilityBomb::ProjectileBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	int a = 0; 
-	a = 10;
-	UKismetSystemLibrary::PrintString(GetWorld(), FString(TEXT("Overlap!")));
-	
-	//Damege Function
-	//Destroy;
+	FVector Loc = GetActorLocation();
+	Loc.Z = 0.f;
+	if (HitParticles)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), HitParticles, Loc, GetActorRotation());
+	}
+	UGameplayStatics::ApplyRadialDamage(GetWorld(), Damage, Loc, 200.f, nullptr, TArray<AActor*>(), this, false, true);
+	Destroy();
 }
 
 void AAbilityBomb::Tick(float DeltaTime)
@@ -48,7 +51,7 @@ void AAbilityBomb::Tick(float DeltaTime)
 
 void AAbilityBomb::Attack(FVector& Location)
 {
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Shoooooooot!!!~!")));
+	
 		/*FVector Loc = Location;
 		double X_Max = Loc.X + 500.f;
 		double Y_Max = Loc.Y + 500.f;

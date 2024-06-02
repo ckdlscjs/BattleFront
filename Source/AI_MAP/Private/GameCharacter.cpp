@@ -24,20 +24,21 @@
 #include "Team_AIGameMode.h"
 #include "Kismet/GameplayStatics.h"
 #include "AI_MAP.h"
+#include "CharacterController.h"
 
 // Sets default values
 AGameCharacter::AGameCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	
+
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("Spring Arm"));
 	SpringArmComp->SetupAttachment(RootComponent);
 
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	CameraComp->SetupAttachment(SpringArmComp);
-	
+
 	/*SpawnBound = CreateDefaultSubobject<USphereComponent>(TEXT("Spawn Bound"));
 	SpawnBound->SetupAttachment(RootComponent);*/
 
@@ -53,10 +54,12 @@ AGameCharacter::AGameCharacter()
 	MaxNum = 5;
 	CoolTimeToNormal = 15.f;
 	Time = CoolTimeToNormal;
-
+	bIsLevelUp = false;
+	LevelUpCount = 0;
 	PlayerInfo = new Protocol::PosInfo();
 	DestInfo = new Protocol::PosInfo();
-	GuardPoint = 0.f;
+	MaxGuardPoint = 0.f;
+	CurrentGuardPoint = 0.f;
 }
 
 AGameCharacter::~AGameCharacter()
@@ -71,27 +74,33 @@ AGameCharacter::~AGameCharacter()
 void AGameCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	auto MyGameMode = Cast<ATeam_AIGameMode>(GetWorld()->GetAuthGameMode());
-	AbilityManager = MyGameMode->GetAbilityManager();
-	AbilityManager->SetOwner(this);
-	FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::SnapToTarget, true);
-	AbilityManager->AttachToComponent(AbilitySpawnPoint,Rules);
+	
+	AbilityManager = GetWorld()->SpawnActor<AAbilityManager>(AbilityManagerClass, AbilitySpawnPoint->GetComponentLocation(), FRotator::ZeroRotator);
+	if (AbilityManager->GetOwner() == nullptr)
+	{
+		AbilityManager->SetOwner(this);
+		FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::SnapToTarget, true);
+		AbilityManager->AttachToComponent(AbilitySpawnPoint, Rules);
+	}
 	PrevCameraRotaion = SpringArmComp->GetComponentRotation();
 
-	if (IsValid(MainHUDWidgetClass))
-	{
-		MainHUD = Cast<UHUDWidget>(CreateWidget(GetWorld(), MainHUDWidgetClass));
-		if (IsValid(MainHUD))
-		{
-		
-			MainHUD->AddToViewport();
-		}
-	}
+	//if (IsValid(MainHUDWidgetClass))
+	//{
+	//	MainHUD = Cast<UHUDWidget>(CreateWidget(GetWorld(), MainHUDWidgetClass));
+	//	if (IsValid(MainHUD))
+	//	{
+	//		APlayerController* MyController = Cast<APlayerController>(GetController());
+	//		MainHUD->SetOwningPlayer(MyController);
+	//		if (MyController == MainHUD->GetOwningPlayer())
+	//		{
+	//			MainHUD->AddToViewport();
+	//		}
+	//	}
+	//}
 
 	AttachWeapon();
 	bDead = false;
 	bFight = false;
-	
 
 	CharacterStat.Level = 1;
 	SetNewLevel(CharacterStat.Level);
@@ -114,11 +123,10 @@ void AGameCharacter::Tick(float DeltaTime)
 	}
 	AbilityManager->Attack();
 
-		///CheckExp(CharacterStat.CurrExp); // ���� �̺�Ʈ �������� �ٲٰ� �ʹ�...
+	///CheckExp(CharacterStat.CurrExp); // ���� �̺�Ʈ �������� �ٲٰ� �ʹ�...
 
-	//Add Server
+//Add Server
 	auto NetManager = GetGameInstance()->GetSubsystem<UNetworkManager>();
-	//if (NetManager->MyPlayer != this)
 	auto gm = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 	if (gm->GetMyPlayer() != this)
 	{
@@ -132,7 +140,7 @@ void AGameCharacter::Tick(float DeltaTime)
 			//speed = vel.Size();
 			//UCharacterAnimInstance* CA = Cast<UCharacterAnimInstance>(GetMesh()->GetAnimInstance());
 			//this->GetVelocity().Size();
-			
+
 			//AddMovementInput(vel);
 			speed = DestInfo->speed();
 			SetActorRotation(rot);
@@ -141,10 +149,31 @@ void AGameCharacter::Tick(float DeltaTime)
 		else
 		{
 			speed = 0.0f;
+			FVector loc(DestInfo->x(), DestInfo->y(), DestInfo->z());
+			FRotator rot(0, DestInfo->yaw(), 0);
+			SetActorRotation(rot);
+			SetActorLocation(loc);
+			//test
 		}
 		bReceived = false;
 		AimYaw = DestInfo->aimyaw();
+
+
+		//test
+		//FVector loc(DestInfo->x(), DestInfo->y(), DestInfo->z());
+		//FRotator rot(0, DestInfo->yaw(), 0);
+		//speed = DestInfo->speed();
+		//SetActorRotation(rot);
+		//SetActorLocation(loc);
+		//bReceived = false;
+		//AimYaw = DestInfo->aimyaw();
 	}
+}
+
+void AGameCharacter::SetVisibility(bool visible)
+{
+	GetMesh()->SetVisibility(visible);
+	Weapon->SetVisibility(visible);
 }
 
 void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigateBy, AActor* DamageCauser)
@@ -159,9 +188,19 @@ void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDama
 	//UKismetSystemLibrary::PrintString(GetWorld(),test
 	if (GetNetworkManager()->GameMode->GetMyPlayer()->PlayerInfo->object_id() == 1)
 	{
-		if (GuardPoint >= 0.f)
+		if (CurrentGuardPoint > 0.f)
 		{
-			GuardPoint -= Damage;
+			float Remain = 0.f;
+			if (Damage > CurrentGuardPoint)
+			{
+				Remain = Damage - CurrentGuardPoint;
+				CurrentGuardPoint = 0.f;
+				CharacterStat.CurrHP -= Remain;
+			}
+			else
+			{
+				CurrentGuardPoint -= Damage;
+			}
 		}
 		else
 		{
@@ -175,8 +214,10 @@ void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDama
 				GetNetworkManager()->SendPacket(dmgedPkt);
 			}
 		}
+
 		if (CharacterStat.CurrHP <= 0.f)
 		{
+			CharacterStat.CurrHP = 0.f;
 			//Player Die Event;
 			bDead = true;
 
@@ -195,8 +236,12 @@ void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDama
 
 			}
 		}
-		
-		MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+		if (MainHUD)
+		{
+			MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+			MainHUD->UpdateGuardPoint(CurrentGuardPoint, MaxGuardPoint);
+		}
+			
 	}
 }
 
@@ -244,14 +289,14 @@ void AGameCharacter::SaveSpringArmRotation()
 
 void AGameCharacter::DetachSpringArm()
 {
-	FDetachmentTransformRules Rules(EDetachmentRule::KeepWorld,EDetachmentRule::KeepWorld,EDetachmentRule::KeepWorld,true);
+	FDetachmentTransformRules Rules(EDetachmentRule::KeepWorld, EDetachmentRule::KeepWorld, EDetachmentRule::KeepWorld, true);
 	SpringArmComp->DetachFromComponent(Rules);
 }
 
 void AGameCharacter::AttachSpringArm()
 {
 	SpringArmComp->SetWorldLocation(GetActorLocation());
-	FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::SnapToTarget,true);
+	FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::SnapToTarget, true);
 	SpringArmComp->AttachToComponent(GetCapsuleComponent(), Rules);
 }
 
@@ -271,26 +316,33 @@ void AGameCharacter::SetNewLevel(int32 NewLevel)
 	{
 		return;
 	}
+	bIsLevelUp = true;
+	LevelUpCount++;
 	CharacterStat.Level = NewLevel;
 	CharacterStat.MaxHP = GameInstance->GetCharacterRowData(NewLevel)->MaxHP;
 	CharacterStat.NextExp = GameInstance->GetCharacterRowData(NewLevel)->NextExp;
 	if (NewLevel == 1)
 	{
 		CharacterStat.CurrHP = CharacterStat.MaxHP;
+		//CharacterStat.CurrHP = 10;	//Test
 		CharacterStat.CurrExp = 0.f;
-		MainHUD->UpdateExpBar(CharacterStat.NextExp, CharacterStat.CurrExp);
+		//if(MainHUD)
+		//	MainHUD->UpdateExpBar(CharacterStat.NextExp, CharacterStat.CurrExp);
 	}
 	else
 	{
-		CharacterStat.CurrHP = CharacterStat.CurrHP +50;
+		CharacterStat.CurrHP = CharacterStat.CurrHP + 50;
 	}
 	CharacterStat.Attack = GameInstance->GetCharacterRowData(NewLevel)->Attack;
 	CharacterStat.Armor = GameInstance->GetCharacterRowData(NewLevel)->Armor;
 	CharacterStat.Speed = GameInstance->GetCharacterRowData(NewLevel)->Speed;
 	CharacterStat.DropExp = GameInstance->GetCharacterRowData(NewLevel)->DropExp;
-	
-	MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
-	SetRandomTextureArray();
+
+	//if (MainHUD)
+	//{
+	//	MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	//	SetRandomTextureArray();
+	//}
 }
 
 const int32 AGameCharacter::GetCharacterLevel()
@@ -323,8 +375,11 @@ void AGameCharacter::SetAbility(int32 Index)
 		SkillData.Index = SkillIndex;
 		SkillData.Level = 0;
 		SkillArray.Add(SkillData.Index, SkillData.Level);*/
-		MainHUD->UpdateSkillImage(AbilityManager->GetSelectedTexture(), AbilityManager->GetSelectedIndex());
-		MainHUD->UpdateSkillLevel(AbilityManager->GetSelectedIndex(), 0);
+		if (AbilityManager->GetSelectedTexture() != nullptr)
+		{
+			MainHUD->UpdateSkillImage(AbilityManager->GetSelectedTexture(), AbilityManager->GetSelectedIndex());
+			MainHUD->UpdateSkillLevel(AbilityManager->GetSelectedIndex(), 0);
+		}
 	}
 	else if (bFind == true)
 	{
@@ -332,7 +387,17 @@ void AGameCharacter::SetAbility(int32 Index)
 		MainHUD->UpdateSkillLevel(FindIndex, FindLevel);
 	}
 	AbilityManager->ClearRandomArray();
+	AbilityManager->ResetSelectedAbility();
+	LevelUpCount--;
 	MainHUD->HideChooseSkill();
+	if (LevelUpCount > 0)
+	{
+		SetRandomTextureArray();
+	}
+	else
+	{
+		bIsLevelUp = false;
+	}
 }
 
 void AGameCharacter::AttachWeapon()
@@ -346,7 +411,7 @@ void AGameCharacter::AttachWeapon()
 		//FVector Loc = Weapon->GetActorLocation();
 		//Weapon->SetActorLocation(Loc);
 		Weapon->SetOwner(this);
-	}	
+	}
 }
 
 void AGameCharacter::SetFightState(bool IsFight)
@@ -376,7 +441,12 @@ void AGameCharacter::UpdateHpWiget()
 
 void AGameCharacter::SetGuardPoint(float Guard)
 {
-	GuardPoint = Guard;
+	MaxGuardPoint = Guard;
+	CurrentGuardPoint = Guard;
+	if (MainHUD)
+	{
+		MainHUD->UpdateGuardPoint(CurrentGuardPoint, MaxGuardPoint);
+	}
 }
 
 AWeapon* AGameCharacter::GetMyWeapon() const
@@ -424,6 +494,11 @@ bool AGameCharacter::IsFight()
 	return bFight;
 }
 
+bool AGameCharacter::GetIsLevelUp()
+{
+	return bIsLevelUp;
+}
+
 float AGameCharacter::GetAimYaw()
 {
 	return AimYaw;
@@ -431,7 +506,7 @@ float AGameCharacter::GetAimYaw()
 
 float& AGameCharacter::GetCurrentHP()
 {
-	
+
 	return CharacterStat.CurrHP;
 }
 
@@ -444,43 +519,6 @@ void AGameCharacter::SetRandomTextureArray()
 {
 	MainHUD->ShowChooseSkill();
 	AbilityManager->SetRandomIndex();
-	/*if (SkillArray.Num() < 5)
-	{
-		while (RandomTexture.Num() < 3)
-		{
-			UTexture2D* Rand = nullptr;
-			int range = FMath::RandRange(0, (TextureArray.Num() - 1));
-			Rand = TextureArray[range];
-			RandomTexture.AddUnique(Rand);
-		}
-	}
-	else
-	{
-		TArray<UTexture2D*> Buff;
-		for (auto iter : AbilityMap)
-		{
-			int32 Level = SkillArray[iter.Value];
-			if (Level < 4)
-			{
-				Buff.AddUnique(iter.Key);
-			}
-		}
-		if (Buff.Num() >=3)
-		{
-			while (RandomTexture.Num() < 3)
-			{
-				UTexture2D* Rand = nullptr;
-				int range = FMath::RandRange(0, (Buff.Num() - 1));
-				Rand = Buff[range];
-				RandomTexture.AddUnique(Rand);
-			}
-		}
-		else
-		{
-			RandomTexture = Buff;
-			
-		}		
-	}*/
 	MainHUD->SetChooseSkillImage(AbilityManager->GetRandTextureArray());
 }
 
@@ -540,10 +578,60 @@ UNetworkManager* AGameCharacter::GetNetworkManager() const
 void AGameCharacter::UpdateHP(float hp)
 {
 	CharacterStat.CurrHP = hp;
-	MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	if(MainHUD)
+		MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
 }
 
 void AGameCharacter::SetDead(bool dead)
 {
 	bDead = dead;
+}
+
+AAbilityManager* AGameCharacter::GetAbilityManger()
+{
+	return AbilityManager;
+}
+
+void AGameCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	auto controller = Cast<ACharacterController>(NewController);
+	controller->SetCharacter(this);
+
+	if (IsValid(MainHUDWidgetClass))
+	{
+		MainHUD = Cast<UHUDWidget>(CreateWidget(GetWorld(), MainHUDWidgetClass));
+		if (IsValid(MainHUD))
+		{
+			APlayerController* MyController = Cast<APlayerController>(GetController());
+			MainHUD->SetOwningPlayer(MyController);
+			if (MyController == MainHUD->GetOwningPlayer())
+			{
+				MainHUD->AddToViewport();
+			}
+		}
+	}
+	//bDead = false;
+	//bFight = false;
+
+	//CharacterStat.Level = 1;
+	//SetNewLevel(CharacterStat.Level);
+
+
+	//TEST
+	if (MainHUD)
+		MainHUD->UpdateExpBar(CharacterStat.NextExp, CharacterStat.CurrExp);
+
+	if (MainHUD)
+	{
+		MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+		SetRandomTextureArray();
+		MainHUD->UpdateGuardPoint(CurrentGuardPoint,MaxGuardPoint );
+	}
+}
+
+AAbilityManager* AGameCharacter::GetAbilityManager()
+{
+	return AbilityManager;
 }

@@ -33,4 +33,6 @@ private:
 		float ChemicalDamage;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", meta = (AllowPrivateAccess = "true"))
 		float Duration;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		class UParticleSystemComponent* ChemicalParticle;
 };

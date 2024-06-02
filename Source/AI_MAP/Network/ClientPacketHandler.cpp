@@ -2,6 +2,7 @@
 #include "BufferReader.h"
 #include "NetworkManager.h"
 
+
 PacketHandlerFunc GPacketHandler[UINT16_MAX];
 
 
@@ -53,6 +54,7 @@ bool Handle_S_LEAVE_GAME(PacketSessionRef& session, Protocol::S_LEAVE_GAME& pkt)
 {
 	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
 	{
+		GameNetwork->ExitGame();
 	}
 
 	return true;
@@ -115,20 +117,33 @@ bool Handle_S_HIT(PacketSessionRef& session, Protocol::S_HIT& pkt)
 	return true;
 }
 
-bool Handle_S_AISPAWNRANDOM(PacketSessionRef& session, Protocol::S_AISPAWNRANDOM& pkt)
+bool Handle_S_AISPAWN_RANDOM(PacketSessionRef& session, Protocol::S_AISPAWN_RANDOM& pkt)
 {
 	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
 	{
 		GameNetwork->HandleAISpawn(pkt);
 	}
-
 	return true;
 }
 
-bool Handle_S_AISPAWNPATROL(PacketSessionRef& session, Protocol::S_AISPAWNPATROL& pkt)
+bool Handle_S_AISPAWN_PATROL(PacketSessionRef& session, Protocol::S_AISPAWN_PATROL& pkt)
 {
-	return false;
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleAISpawn(pkt);
+	}
+	return true;
 }
+
+bool Handle_S_AISPAWN_BOSS(PacketSessionRef& session, Protocol::S_AISPAWN_BOSS& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleAISpawn(pkt);
+	}
+	return true;
+}
+
 
 bool Handle_S_AIMOVE(PacketSessionRef& session, Protocol::S_AIMOVE& pkt)
 {
@@ -220,6 +235,88 @@ bool Handle_S_AIPROJSPAWN(PacketSessionRef& session, Protocol::S_AIPROJSPAWN& pk
 	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
 	{
 		GameNetwork->HandleAISpawnProjectile(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_AI_KNOCKS_BACK(PacketSessionRef& session, Protocol::S_AI_KNOCKS_BACK& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleAIKnocksBack(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_PLAYERSKILL_RANGE(PacketSessionRef& session, Protocol::S_PLAYERSKILL_RANGE& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleSkillRange(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_PLAYERSKILL_GUARD(PacketSessionRef& session, Protocol::S_PLAYERSKILL_GUARD& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleSkillGuard(pkt);
+	}
+
+	return true;
+}
+
+bool Handle_S_PLAYERSKILL_HEAL(PacketSessionRef& session, Protocol::S_PLAYERSKILL_HEAL& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleSkillHeal(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_PLAYERHEAL(PacketSessionRef& session, Protocol::S_PLAYERHEAL& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleHealed(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_MAKEDRONE(PacketSessionRef& session, Protocol::S_MAKEDRONE& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleMakeDrone(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_MOVEDRONE(PacketSessionRef& session, Protocol::S_MOVEDRONE& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleMoveDrone(pkt);
+	}
+	return false;
+}
+
+bool Handle_S_SEARCHDRONE(PacketSessionRef& session, Protocol::S_SEARCHDRONE& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleSearchDrone(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_RETURNDRONE(PacketSessionRef& session, Protocol::S_RETURNDRONE& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleReturnDrone(pkt);
 	}
 	return true;
 }

@@ -22,7 +22,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetLocation(FVector& Location) override;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FireArea", meta = (AllowPrivateAccess = "true"))
-
-		TSubclassOf<class AGrenadeFireArea> FireAreaClass;
-
+	TSubclassOf<class AGrenadeFireArea> FireAreaClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Component" , meta = (AllowPrivateAccess = "true"))
+		class UParticleSystem* HitParticles;
 };

@@ -93,14 +93,19 @@ public:
 	void ExpUp(float Exp);//Test
 
 	bool FindAbility(int32 Index);
-	const float GetDamage();
 	bool IsFight();
+	bool GetIsLevelUp();
+	const float GetDamage();
+	
 	float GetAimYaw();
 	float& GetCurrentHP();
 	float GetCurrentMaxHp();
-
+	
 	UPROPERTY(EditAnywhere)
 	float CharacterSightRange = 700.f;
+
+	UFUNCTION(BlueprintCallable)
+	void SetVisibility(bool visible);
 
 private:
 	UFUNCTION()
@@ -115,7 +120,10 @@ private:
 		USceneComponent* AbilitySpawnPoint;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = true))
 		class AWeapon* Weapon;
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Manager", meta = (AllowPrivateAccess = "true"))
+		TSubclassOf<class AAbilityManager> AbilityManagerClass;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+		class AAbilityManager* AbilityManager;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon", meta = (AllowPrivateAccess = true))
 		FName WeaponSocket= TEXT("WeaponSocket");
 	UPROPERTY(EditAnywhere,  Category = "Weapon", meta = (AllowPrivateAccess = "true"))
@@ -126,7 +134,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
 		FCharacterStat CharacterStat;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
-		float GuardPoint;
+		float MaxGuardPoint;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
+		float CurrentGuardPoint;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Widget", meta = (AllowPrivateAccess = "true"))
 		TSubclassOf<UUserWidget> MainHUDWidgetClass;
 	UPROPERTY()
@@ -156,13 +166,15 @@ private:
 	UPROPERTY()
 		float Time;
 	UPROPERTY()
+		int32 LevelUpCount;
+	UPROPERTY()
 		bool bFight;
 	UPROPERTY()
 		float AimYaw;
 	UPROPERTY()
-		class AAbilityManager* AbilityManager; //AbilityManager
-	UPROPERTY()
 		class AAbilityBomb* Bomd;
+	UPROPERTY()
+		bool bIsLevelUp;
 
 public:
 	bool IsMyPlayer();
@@ -191,4 +203,7 @@ public:
 	class UNetworkManager* GetNetworkManager() const;
 	void UpdateHP(float hp);
 	void SetDead(bool dead);
+	class AAbilityManager* GetAbilityManger();
+	virtual void PossessedBy(AController* NewController) override;
+	class AAbilityManager* GetAbilityManager();
 };

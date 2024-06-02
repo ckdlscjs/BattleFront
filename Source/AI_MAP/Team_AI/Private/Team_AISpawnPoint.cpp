@@ -19,6 +19,10 @@ ATeam_AISpawnPoint::ATeam_AISpawnPoint()
 void ATeam_AISpawnPoint::BeginPlay()
 {
 	Super::BeginPlay();
+	FHitResult result;
+	FVector downVector(0.0f, 0.0f, -100000.0f);
+	GetWorld()->LineTraceSingleByProfile(result, GetActorLocation(), downVector, FName(TEXT("BlockAll")));
+	GroundLocation = result.Location;
 }
 
 // Called every frame
@@ -32,6 +36,8 @@ ATeam_AICharacterBase* ATeam_AISpawnPoint::SpawnActor()
 	//TODO : Random Enemy
 	//
 	auto spawnActor = GetWorld()->SpawnActor<ATeam_AICharacterBase>(EnemyClass, GetActorLocation(), { 0, 0, 0 });
+	GroundLocation.Z += spawnActor->GetDefaultHalfHeight();
+	spawnActor->SetActorLocation(GroundLocation);
 	//send to packet server
 	if (!IsValid(spawnActor))
 	{
@@ -44,16 +50,14 @@ ATeam_AICharacterBase* ATeam_AISpawnPoint::SpawnActor()
 
 ATeam_AICharacter_Recv* ATeam_AISpawnPoint::RecvedSpawnActor()
 {
-	auto loc = GetActorLocation();
-	auto temp = GetWorld()->SpawnActor(AIClassRecv, &loc);
-	auto spawnActor = Cast<ATeam_AICharacter_Recv>(temp);
-	//auto spawnActor = GetWorld()->SpawnActor(AIClassRecv, GetActorLocation());
+	auto spawnActor = GetWorld()->SpawnActor<ATeam_AICharacter_Recv>(AIClassRecv, GetActorLocation(), { 0, 0, 0 });
+	GroundLocation.Z += spawnActor->GetDefaultHalfHeight();
+	spawnActor->SetActorLocation(GroundLocation); //NOT KNOW TO NEEDED.......................
+	
 	if (!IsValid(spawnActor))
 	{
 		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("NotRecvedActorSpawn")));
 		return nullptr;
 	}
-	//spawnActor->pos.set_object_id(AiRandomSpawnPkt.object_id());
-	/*auto temp = Cast<ATeam_AICharacter_Recv>(spawnActor);*/
 	return spawnActor;
 }

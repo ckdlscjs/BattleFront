@@ -87,38 +87,40 @@ message S_HIT
 	float damage = 3;
 }
 
-message C_AISPAWNRANDOM
+message C_AISPAWN_RANDOM
 {
 	uint64 object_id = 1;
-	float x = 2;
-	float y = 3;
-	float z = 4;
-	float yaw = 5;
-	float pitch = 6;
-	float roll = 7;
-	uint64 container_Idx = 8;
+	uint64 container_Idx = 2;
 }
 
-message S_AISPAWNRANDOM
+message S_AISPAWN_RANDOM
 {
 	uint64 object_id = 1;
-	float x = 2;
-	float y = 3;
-	float z = 4;
-	float yaw = 5;
-	float pitch = 6;
-	float roll = 7;
-	uint64 container_Idx = 8;
+	uint64 container_Idx = 2;
 }
 
-message C_AISPAWNPATROL
+message C_AISPAWN_PATROL
 {
-	repeated ObjectInfo enemies = 1;
+	uint64 object_id = 1;
+	uint64 container_Idx = 2;
 }
 
-message S_AISPAWNPATROL
+message S_AISPAWN_PATROL
 {
-	repeated ObjectInfo enemies = 1;
+	uint64 object_id = 1;
+	uint64 container_Idx = 2;
+}
+
+message C_AISPAWN_BOSS
+{
+	uint64 object_id = 1;
+	uint64 container_Idx = 2;
+}
+
+message S_AISPAWN_BOSS
+{
+	uint64 object_id = 1;
+	uint64 container_Idx = 2;
 }
 
 message S_AIMOVE
@@ -146,11 +148,13 @@ message C_AIMOVESTOP
 message S_AIATTACK
 {
 	uint64 object_id = 1;
+	uint64 attack_idx = 2;
 }
 
 message C_AIATTACK
 {
 	uint64 object_id = 1;
+	uint64 attack_idx = 2;
 }
 
 message S_AIROTATE
@@ -259,4 +263,130 @@ message C_AIPROJSPAWN
 	float roll = 8;
 	float speed = 9;
 	float attackDmg = 10;
+}
+
+message S_AI_KNOCKS_BACK
+{
+	uint64 object_id = 1;
+	uint64 target_id = 2;
+	float vx = 3;
+	float vy = 4;
+	float vz = 5;
+}
+
+message C_AI_KNOCKS_BACK
+{
+	uint64 object_id = 1;
+	uint64 target_id = 2;
+	float vx = 3;
+	float vy = 4;
+	float vz = 5;
+}
+
+message S_PLAYERSKILL_RANGE
+{
+	uint64 object_id = 1;
+	uint64 abilityArrayIdx = 2;
+	float x = 3;
+	float y = 4;
+	float z = 5;
+}
+
+message C_PLAYERSKILL_RANGE
+{
+	uint64 object_id = 1;
+	uint64 abilityArrayIdx = 2;
+	float x = 3;
+	float y = 4;
+	float z = 5;
+}
+
+message S_PLAYERSKILL_GUARD
+{
+	uint64 object_id = 1;
+	uint64 guardPoint = 2;
+}
+
+message C_PLAYERSKILL_GUARD
+{
+	uint64 object_id = 1;
+	uint64 guardPoint = 2;
+}
+
+message S_PLAYERSKILL_HEAL
+{
+	uint64 object_id = 1;
+	uint64 abilityArrayIdx = 2;
+}
+
+message C_PLAYERSKILL_HEAL
+{
+	uint64 object_id = 1;
+	uint64 abilityArrayIdx = 2;
+}
+
+message S_PLAYERHEAL
+{
+	uint64 object_id = 1;
+	uint64 updeatedHP = 2;
+}
+
+message C_PLAYERHEAL
+{
+	uint64 object_id = 1;
+	uint64 updeatedHP = 2;
+}
+
+message S_MAKEDRONE
+{
+	uint64 object_id = 1;
+	uint64 abilityArrayIdx = 2;
+}
+
+message C_MAKEDRONE
+{
+	uint64 object_id = 1;
+	uint64 abilityArrayIdx = 2;
+}
+
+message S_MOVEDRONE
+{
+	uint64 object_id = 1;
+	float x = 2;
+	float y = 3;
+	float z = 4;
+}
+
+message C_MOVEDRONE
+{
+	uint64 object_id = 1;
+	float x = 2;
+	float y = 3;
+	float z = 4;
+}
+
+message S_SEARCHDRONE
+{
+	uint64 object_id = 1;
+	float x = 2;
+	float y = 3;
+	float z = 4;
+}
+
+message C_SEARCHDRONE
+{
+	uint64 object_id = 1;
+	float x = 2;
+	float y = 3;
+	float z = 4;
+}
+
+message S_RETURNDRONE
+{
+	uint64 object_id = 1;
+}
+
+message C_RETURNDRONE
+{
+	uint64 object_id = 1;
 }

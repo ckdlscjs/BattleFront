@@ -42,7 +42,13 @@ void AAbilityGranade::ProjectileBeginOverlap(UPrimitiveComponent* HitComp, AActo
 	CapsuleCompoent->SetGenerateOverlapEvents(false);
 	UKismetSystemLibrary::PrintString(GetWorld(), FString(TEXT("Overlap!")));
 	FVector Loc = SweepResult.Location;
-	AGrenadeFireArea* FireArea = GetWorld()->SpawnActor<AGrenadeFireArea>(FireAreaClass, SweepResult.Location,FRotator::ZeroRotator);
+	Loc.Z = 0;
+	if (HitParticles)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(this, HitParticles, Loc, GetActorRotation());
+	}
+	
+	AGrenadeFireArea* FireArea = GetWorld()->SpawnActor<AGrenadeFireArea>(FireAreaClass, Loc,FRotator::ZeroRotator);
 	auto MyOwner = GetOwner();
 	FireArea->SetOwner(MyOwner);
 	Destroy();

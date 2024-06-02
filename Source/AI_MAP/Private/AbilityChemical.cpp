@@ -6,6 +6,8 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "Particles/ParticleSystemComponent.h"
+
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -13,9 +15,10 @@ AAbilityChemical::AAbilityChemical()
 {
 	SphereCollision = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere Collision"));
 	RootComponent = SphereCollision;
-	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
-	StaticMesh->SetupAttachment(RootComponent);
-
+	//StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
+	//StaticMesh->SetupAttachment(RootComponent);
+	ChemicalParticle = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particle"));
+	ChemicalParticle->SetupAttachment(RootComponent);
 	MyAbilityLevel = 0;
 	Damage = 0.0f;
 	CoolTime = 7.f - MyAbilityLevel;

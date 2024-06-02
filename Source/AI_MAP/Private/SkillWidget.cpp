@@ -16,6 +16,7 @@ void USkillWidget::NativeOnInitialized()
 
 	Q_SkillIamge = Cast<UImage>(GetWidgetFromName(TEXT("Q_Image")));
 	Q_SkillWidget = Cast<USkillLevelWidget>(GetWidgetFromName(TEXT("QSkillLevel")));
+
 	SkillArr.Add(Q_SkillIamge, Q_SkillWidget);
 	SkillImageArr.Add(0, Q_SkillIamge);
 
@@ -34,6 +35,11 @@ void USkillWidget::NativeOnInitialized()
 	SkillArr.Add(R_SkillIamge, R_SkillWidget);
 	SkillImageArr.Add(3, R_SkillIamge);
 
+	for (auto Data : SkillImageArr)
+	{
+		UImage* Image = Data.Value;
+		Image->SetVisibility(ESlateVisibility::Hidden);
+	}
 }
 
 void USkillWidget::UpdateSkillImage(UTexture2D* Texture, int32 index)
@@ -43,7 +49,10 @@ void USkillWidget::UpdateSkillImage(UTexture2D* Texture, int32 index)
 		return;
 	}
 	UImage* image = SkillImageArr.FindRef(index);
+	image->SetVisibility(ESlateVisibility::Visible);
+	
 	image->SetBrushFromTexture(Texture);
+	
 }
 
 void USkillWidget::UpdateSkillLevel(int32 index,int32 level)

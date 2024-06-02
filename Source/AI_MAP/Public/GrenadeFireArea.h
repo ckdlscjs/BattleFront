@@ -29,13 +29,12 @@ public:
 		void EndOverlap(class UPrimitiveComponent* HitComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	void TakePlayerDamage();
 private:
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		UStaticMeshComponent* FireTestMesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		class USphereComponent* SphereCollision;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status", meta = (AllowPrivateAccess = "true"))
 		float DurationTime;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		class UParticleSystemComponent* ParticleComponent;
 	float Damage;
 	UPROPERTY()
 	FTimerHandle DamageTimerHandle;

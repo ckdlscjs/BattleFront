@@ -83,8 +83,8 @@ bool RecvWorker::ReceivePacket(TArray<uint8>& OutPacket)
 
 bool RecvWorker::ReceiveDesiredBytes(uint8* Results, int32 Size)
 {
-	uint32 PendingDataSize;
-	if (Socket->HasPendingData(PendingDataSize) == false || PendingDataSize <= 0)
+	uint32 PendingDataSize = 0;
+	if (Socket && Socket->HasPendingData(PendingDataSize) == false || PendingDataSize <= 0)
 		return false;
 
 	int32 Offset = 0;

@@ -8,7 +8,7 @@
 #include "CharacterController.generated.h"
 
 class UNetworkManager;
-
+class UMaterialParameterCollection;
 /**
  * 
  */
@@ -67,7 +67,7 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 		class  UInputAction* ExpUpAction;
 	/*****************************************/
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 	class AGameCharacter* GameCharacter;
 	UPROPERTY()
 	bool bDetachState;
@@ -76,8 +76,12 @@ private:
 
 	FRotator Look;
 
+	//using bush
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bush", meta = (AllowPrivateAccess = "true"))
+	UMaterialParameterCollection* FMC_Fade;
 public:
 	UNetworkManager* GetNetworkManager() const;
 	const float MOVE_PACKET_SEND_DELAY = 0.0f;
 	float MovePacketSendTimer = MOVE_PACKET_SEND_DELAY;
+	void SetCharacter(AGameCharacter* player);
 };

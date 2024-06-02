@@ -16,7 +16,7 @@
 #include "Weapon.h"
 #include "Team_AICharacter_Recv.h"
 #include "Team_AIProjectileBase.h"
-
+#include "Team_AISpawnPointBoss.h"
 ATeam_AIGameMode::ATeam_AIGameMode()
 {
 	// use our custom PlayerController class
@@ -41,8 +41,9 @@ ATeam_AIGameMode::ATeam_AIGameMode()
 		mBlueprintClass = (UClass*)blueprint_finder.Object->GeneratedClass;
 	}
 	*/
-	Duration_SpawnEnemyRandom = 7.0f;
-	Duration_SpawnEnemyPatrol = 10.0f;
+	Duration_SpawnEnemyRandom = 5.0f;
+	Duration_SpawnEnemyPatrol = 5.0f;
+	Duration_SpawnEnemyBoss = 5.0f;
 	Duration_GameLevel = 15.0f;
 	GameLevel = 1;
 
@@ -58,6 +59,8 @@ void ATeam_AIGameMode::StartPlay()
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATeam_AISpawnPointRandom::StaticClass(), SpawnPoints_Random);
 
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATeam_AIPatrolRoute::StaticClass(), PatrolRoutes);
+
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATeam_AISpawnPointBoss::StaticClass(), SpawnPoints_Boss);
 
 	////IncreaseGameLevel
 	//GetWorldTimerManager().SetTimer
@@ -77,8 +80,6 @@ void ATeam_AIGameMode::StartPlay()
 	////SpawnEnemy
 	//GetWorldTimerManager().SetTimer(TimerHandle_SpawnRandom, this, &ATeam_AIGameMode::SpawnEnemyRandom, Duration_SpawnEnemyRandom, true);
 	//GetWorldTimerManager().SetTimer(TimerHandle_SpawnPatrol, this, &ATeam_AIGameMode::SpawnEnemyPatrol, Duration_SpawnEnemyPatrol, true);
-
-
 }
 
 void ATeam_AIGameMode::Tick(float DeltaSeconds)
@@ -86,6 +87,12 @@ void ATeam_AIGameMode::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 
+}
+
+void ATeam_AIGameMode::Logout(AController* Exiting)
+{
+	Super::Logout(Exiting);
+	GetNetworkManager()->DisconnectFromGameServer();
 }
 
 
@@ -104,17 +111,9 @@ void ATeam_AIGameMode::SpawnEnemyRandom()
 		//AddSpawnActor(enermy);
 		//auto enermy = Cast<ATeam_AISpawnPointRandom>(spawnPoint);
 		
-		Protocol::C_AISPAWNRANDOM pkt;
+		Protocol::C_AISPAWN_RANDOM pkt;
 		{
 			pkt.set_object_id(enermy->pos.object_id());
-			FVector loc(enermy->GetActorLocation());
-			pkt.set_x(loc.X);
-			pkt.set_y(loc.Y);
-			pkt.set_z(loc.Z);
-			FRotator rot(enermy->GetActorRotation());
-			pkt.set_yaw(rot.Yaw);
-			pkt.set_pitch(rot.Pitch);
-			pkt.set_roll(rot.Roll);
 			pkt.set_container_idx(i);
 			GetNetworkManager()->SendPacket(pkt); 
 		}
@@ -139,17 +138,9 @@ void ATeam_AIGameMode::SpawnEnemyPatrol()
 				auto enermy = spawnPoint->SpawnActor();
 				Enemies.Add(enermy->pos.object_id(), enermy);
 
-				Protocol::C_AISPAWNRANDOM pkt;
+				Protocol::C_AISPAWN_PATROL pkt;
 				{
 					pkt.set_object_id(enermy->pos.object_id());
-					FVector loc(enermy->GetActorLocation());
-					pkt.set_x(loc.X);
-					pkt.set_y(loc.Y);
-					pkt.set_z(loc.Z);
-					FRotator rot(enermy->GetActorRotation());
-					pkt.set_yaw(rot.Yaw);
-					pkt.set_pitch(rot.Pitch);
-					pkt.set_roll(rot.Roll);
 					pkt.set_container_idx(i);
 					GetNetworkManager()->SendPacket(pkt);
 				}
@@ -158,60 +149,57 @@ void ATeam_AIGameMode::SpawnEnemyPatrol()
 	}
 }
 
+void ATeam_AIGameMode::SpawnEnemyBoss()
+{
+	if (SpawnPoints_Boss.Num() <= 0)
+		return;
+	if (Boss)
+		return;
+
+	for (int i = 0; i < SpawnPoints_Boss.Num(); i++)
+	{		
+		Boss = Cast<ATeam_AISpawnPointBoss>(SpawnPoints_Boss[i])->SpawnActor();
+		Enemies.Add(Boss->pos.object_id(), Boss);
+		Protocol::C_AISPAWN_BOSS pkt;
+		{
+			pkt.set_object_id(Boss->pos.object_id());
+			pkt.set_container_idx(i);
+			GetNetworkManager()->SendPacket(pkt);
+		}
+	}
+	
+}
+
 int32 ATeam_AIGameMode::GetGameLevel() const
 {
 	return GameLevel;
 }
 
-void ATeam_AIGameMode::AddSpawnActor(AActor* actor)
-{
-	//if (!actor)
-	//	return;
-	//Enemies.Add(actor);
-}
-
-void ATeam_AIGameMode::DeleteSpawnActor(AActor* actor)
-{
-	/*if (!actor)
-		return;
-	Enemies.Remove(actor);*/
-}
-
-void ATeam_AIGameMode::AddSpawnActor(const Protocol::ObjectInfo& AiInfo)
-{
-	ATeam_AICharacterBase* enemy = nullptr;
-	FVector location(AiInfo.pos_info().x(), AiInfo.pos_info().y(), AiInfo.pos_info().z());
-	FRotator rotation(AiInfo.pos_info().pitch(), AiInfo.pos_info().yaw(), AiInfo.pos_info().roll());
-	//if (MyPlayer->PlayerInfo->object_id() == 1)
-	//{
-	//	//changeClasses(tarray)
-	//	//enemy = Cast<ATeam_AICharacterBase>(GetWorld()->SpawnActor(AIClass, &location, &rotation));
-	//	enemy = Cast<ATeam_AICharacterBase>(GetWorld()->SpawnActor(AIClass, &location));
-	//	enemy->pos = AiInfo.pos_info();
-	//}
-	//else
-	//{
-		//changeClasses(tarray)
-		//enemy = Cast<ATeam_AICharacter_Recv>(GetWorld()->SpawnActor(AIClassRecv, &location, &rotation));
-		enemy = Cast<ATeam_AICharacter_Recv>(GetWorld()->SpawnActor(AIClassRecv, &location));
-	//}	
-	Enemies.Add(AiInfo.object_id(), enemy);
-}
-
-void ATeam_AIGameMode::AddSpawnActor(const Protocol::S_AISPAWNRANDOM& AiRandomSpawnPkt)
+void ATeam_AIGameMode::AddSpawnActor(const Protocol::S_AISPAWN_RANDOM& AiSpawnPkt)
 {
 	ATeam_AICharacter_Recv* enemy = nullptr;
 
-	enemy = Cast<ATeam_AISpawnPointRandom>(SpawnPoints_Random[AiRandomSpawnPkt.container_idx()])->RecvedSpawnActor();
-	enemy->pos.set_object_id(AiRandomSpawnPkt.object_id());
-	Enemies.Add(AiRandomSpawnPkt.object_id(), enemy);
+	enemy = Cast<ATeam_AISpawnPointRandom>(SpawnPoints_Random[AiSpawnPkt.container_idx()])->RecvedSpawnActor();
+	enemy->pos.set_object_id(AiSpawnPkt.object_id());
+	Enemies.Add(AiSpawnPkt.object_id(), enemy);
 }
 
-
-void ATeam_AIGameMode::DeleteSpawnActor(const Protocol::ObjectInfo& AiInfo)
+void ATeam_AIGameMode::AddSpawnActor(const Protocol::S_AISPAWN_PATROL& AiSpawnPkt)
 {
-	
+	ATeam_AICharacter_Recv* enemy = nullptr;
+
+	enemy = Cast<ATeam_AISpawnPointPatrol>(PatrolRoutes[AiSpawnPkt.container_idx()])->RecvedSpawnActor();
+	enemy->pos.set_object_id(AiSpawnPkt.object_id());
+	Enemies.Add(AiSpawnPkt.object_id(), enemy);
 }
+
+void ATeam_AIGameMode::AddSpawnActor(const Protocol::S_AISPAWN_BOSS& AiSpawnPkt)
+{
+	Boss = Cast<ATeam_AISpawnPointBoss>(SpawnPoints_Boss[AiSpawnPkt.container_idx()])->RecvedSpawnActor();
+	Boss->pos.set_object_id(AiSpawnPkt.object_id());
+	Enemies.Add(AiSpawnPkt.object_id(), Boss);
+}
+
 
 float ATeam_AIGameMode::GetDurationSpawnEnemyRandom() const
 {
@@ -223,24 +211,11 @@ float ATeam_AIGameMode::GetDurationSpawnEnemyPatrol() const
 	return Duration_SpawnEnemyPatrol;
 }
 
-void ATeam_AIGameMode::SpawnAbilityManager()
+
+
+
+TMap<uint64, AGameCharacter*>& ATeam_AIGameMode::GetPlayers()
 {
-	AbilityManager = GetWorld()->SpawnActor<AAbilityManager>(AbilityManagerClass, FVector::ZeroVector, FRotator::ZeroRotator);
-}
-
-AAbilityManager* ATeam_AIGameMode::GetAbilityManager()
-{
-
-	if (AbilityManager == nullptr)
-	{
-		SpawnAbilityManager();
-	}
-	return AbilityManager;
-}
-
-const TMap<uint64, AGameCharacter*>& ATeam_AIGameMode::GetPlayers() const
-{
-
 	return Players;
 }
 
@@ -251,13 +226,22 @@ void ATeam_AIGameMode::SetPlayerInfo(bool isMine, const Protocol::PosInfo& Info)
 	AGameCharacter* player = nullptr;
 	if (isMine)
 	{
-		auto PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-		player = Cast<AGameCharacter>(PlayerController->GetPawn());
+		// Case 1
+		auto PlayerController = Cast<ACharacterController>(UGameplayStatics::GetPlayerController(this, 0));
+		player = Cast<AGameCharacter>(GetWorld()->SpawnActor(PlayerClass, &location, &rotation));
+		PlayerController->Possess(player);
+		PlayerController->SetCharacter(Cast<AGameCharacter>(PlayerController->GetPawn()));
+		
+
+		// Case 2
+		//auto PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+		//player = Cast<AGameCharacter>(PlayerController->GetPawn());
+
 		MyPlayer = player;
 	}
 	else
 	{
-		if(MyPlayer->PlayerInfo->object_id() != Info.object_id())	// Test
+		if(MyPlayer->PlayerInfo->object_id() != Info.object_id())
 			player = Cast<AGameCharacter>(GetWorld()->SpawnActor(PlayerClass, &location, &rotation));
 	}
 	if (!player)
@@ -325,6 +309,97 @@ void ATeam_AIGameMode::SetPlayerDead(const Protocol::S_PLAYERDEAD& playerDeadPkt
 	Player->SetDead(playerDeadPkt.dead());
 }
 
+void ATeam_AIGameMode::SetPlayerSKill(const Protocol::S_PLAYERSKILL_RANGE& rangePkt)
+{
+	const uint64 ObjectId = rangePkt.object_id();
+	AGameCharacter** FindActor = Players.Find(ObjectId);
+	if (FindActor == nullptr)
+		return;
+	AGameCharacter* Player = *FindActor;
+
+	if (MyPlayer != Player)
+	{
+		auto am = Player->GetAbilityManger();
+		FVector loc = { rangePkt.x(), rangePkt.y(), rangePkt.z() };
+		am->RecvMakeRange(Player, rangePkt.abilityarrayidx(), loc);
+	}
+}
+
+void ATeam_AIGameMode::SetPlayerSKill(const Protocol::S_PLAYERSKILL_GUARD& guardPkt)
+{
+	const uint64 ObjectId = guardPkt.object_id();
+	AGameCharacter** FindActor = Players.Find(ObjectId);
+	if (FindActor == nullptr)
+		return;
+	AGameCharacter* Player = *FindActor;
+	Player->SetGuardPoint(guardPkt.guardpoint());
+}
+
+void ATeam_AIGameMode::SetPlayerSKill(const Protocol::S_PLAYERSKILL_HEAL& healPkt)
+{
+	const uint64 ObjectId = healPkt.object_id();
+	AGameCharacter** FindActor = Players.Find(ObjectId);
+	if (FindActor == nullptr)
+		return;
+	AGameCharacter* Player = *FindActor;
+	auto am = Player->GetAbilityManger();
+	am->RecvMakeHeal(healPkt.abilityarrayidx());
+}
+
+void ATeam_AIGameMode::SetUpdatedHeal(const Protocol::S_PLAYERHEAL& healPkt)
+{
+	const uint64 ObjectId = healPkt.object_id();
+	AGameCharacter** FindActor = Players.Find(ObjectId);
+	if (FindActor == nullptr)
+		return;
+	AGameCharacter* Player = *FindActor;
+	Player->UpdateHP(healPkt.updeatedhp());
+}
+
+void ATeam_AIGameMode::SetMakeDrone(const Protocol::S_MAKEDRONE& makeDrnPkt)
+{
+	const uint64 ObjectId = makeDrnPkt.object_id();
+	AGameCharacter** FindActor = Players.Find(ObjectId);
+	if (FindActor == nullptr)
+		return;
+	AGameCharacter* Player = *FindActor;
+	auto abilityManager = Player->GetAbilityManager();
+	if (abilityManager)
+	{
+		auto drone = abilityManager->GetDrone();
+		if (drone == nullptr)
+			abilityManager->RecvMakeDrone(makeDrnPkt.abilityarrayidx(), Player);
+	}
+}
+
+void ATeam_AIGameMode::SetSearchDrone(const Protocol::S_SEARCHDRONE& searchDrnPkt)
+{
+	const uint64 ObjectId = searchDrnPkt.object_id();
+	AGameCharacter** FindActor = Players.Find(ObjectId);
+	if (FindActor == nullptr)
+		return;
+	AGameCharacter* Player = *FindActor;
+	auto abilityManager = Player->GetAbilityManager();
+	if (abilityManager == nullptr)
+		return;
+	FVector loc{ searchDrnPkt.x(), searchDrnPkt.y(), searchDrnPkt.z() };
+	abilityManager->RecvSearchDrone(loc);
+}
+
+void ATeam_AIGameMode::SetMoveDrone(const Protocol::S_MOVEDRONE& moveDrnPkt)
+{
+	const uint64 ObjectId = moveDrnPkt.object_id();
+	AGameCharacter** FindActor = Players.Find(ObjectId);
+	if (FindActor == nullptr)
+		return;
+	AGameCharacter* Player = *FindActor;
+	auto abilityManager = Player->GetAbilityManager();
+	if (abilityManager == nullptr)
+		return;
+	FVector loc{ moveDrnPkt.x(), moveDrnPkt.y(), moveDrnPkt.z() };
+	abilityManager->RecvMoveDrone(loc);
+}
+
 const TMap<uint64, ATeam_AICharacterBase*>& ATeam_AIGameMode::GetEnemies() const
 {
 	return Enemies;
@@ -375,7 +450,7 @@ void ATeam_AIGameMode::SetAIAttack(const Protocol::S_AIATTACK& AIattackPkt)
 	ATeam_AICharacter_Recv* enemy = Cast<ATeam_AICharacter_Recv>(*FindActor);
 	if (enemy == nullptr)
 		return;
-	enemy->RecvAttack();
+	enemy->RecvAttack(AIattackPkt.attack_idx());
 }
 
 void ATeam_AIGameMode::SetAIRotate(const Protocol::S_AIROTATE& AIRotPkt)
@@ -458,6 +533,20 @@ void ATeam_AIGameMode::SetAIDespawn(uint64 objectID)
 	Enemies.Remove(objectID);
 }
 
+void ATeam_AIGameMode::SetKnocksBack(const Protocol::S_AI_KNOCKS_BACK& AIKnocksBackPkt)
+{
+	const uint64 ObjectId = AIKnocksBackPkt.target_id();
+	AGameCharacter** FindActor = Players.Find(ObjectId);
+	if (FindActor == nullptr)
+		return;
+
+	AGameCharacter* Player = (*FindActor);
+
+	FVector VelVec{ AIKnocksBackPkt.vx(),AIKnocksBackPkt.vy(), AIKnocksBackPkt.vz() };
+	Player->LaunchCharacter(VelVec, false, false);
+	/*Player->DesLoc = Player->GetActorLocation();*/
+}
+
 UNetworkManager* ATeam_AIGameMode::GetNetworkManager() const
 {
 	return GetGameInstance()->GetSubsystem<UNetworkManager>();
@@ -485,6 +574,7 @@ void ATeam_AIGameMode::InitializeStartPlay()
 	//SpawnEnemy
 	GetWorldTimerManager().SetTimer(TimerHandle_SpawnRandom, this, &ATeam_AIGameMode::SpawnEnemyRandom, Duration_SpawnEnemyRandom, false);
 	GetWorldTimerManager().SetTimer(TimerHandle_SpawnPatrol, this, &ATeam_AIGameMode::SpawnEnemyPatrol, Duration_SpawnEnemyPatrol, false);
+	GetWorldTimerManager().SetTimer(TimerHandle_SpawnBoss, this, &ATeam_AIGameMode::SpawnEnemyBoss, Duration_SpawnEnemyBoss, false);
 }
 
 TArray<TSubclassOf<ATeam_AIProjectileBase>>& ATeam_AIGameMode::GetAIProjClasses()
@@ -510,3 +600,14 @@ int64 ATeam_AIGameMode::WinnerCheck()
 	
 	return 0;
 }
+
+ATeam_AICharacterBase* ATeam_AIGameMode::GetBoss()
+{
+	return Boss;
+}
+
+//void ATeam_AIGameMode::Logout(AController* Exiting)
+//{
+//	Super::Logout(Exiting);
+//	GetNetworkManager()->DisconnectFromGameServer();
+//}

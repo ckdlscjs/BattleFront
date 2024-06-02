@@ -64,19 +64,19 @@ bool ATeam_AICharacter_Recv::RecvMoveTo(FVector loc, FRotator rot, float speed)
 	return true;
 }
 
-bool ATeam_AICharacter_Recv::RecvAttack()
+bool ATeam_AICharacter_Recv::RecvAttack(int32 idx)
 {
-	BehaviorAttack();
+	BehaviorAttack(idx);
 	return true;
 }
-
+/*
 bool ATeam_AICharacter_Recv::RecvAttackParticle()
 {
 	//recv activateParticle
 	//ActiveAttackParticle();
 	return true;
 }
-
+*/
 bool ATeam_AICharacter_Recv::RecvRotate(FRotator rot)
 {
 	SetActorRotation(rot);

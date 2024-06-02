@@ -64,6 +64,11 @@ void AWeapon::Shot()
 	}
 }
 
+void AWeapon::SetVisibility(bool visible)
+{
+	StaticMesh->SetVisibility(visible);
+}
+
 UNetworkManager* AWeapon::GetNetworkManager() const
 {
 	return GetGameInstance()->GetSubsystem<UNetworkManager>();

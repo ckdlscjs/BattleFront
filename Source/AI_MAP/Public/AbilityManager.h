@@ -24,8 +24,9 @@ public:
 	class UTexture2D* GetSelectedTexture();
 	int32 GetSelectedIndex();
 	void DroneAttack();
+	void DroneReturn();
 	bool CheckDistanceToDrone();
-	void ReturnDrone();
+	void ResetSelectedAbility();
 	FVector GetDronePointLocation();
 	void HealAbility();
 protected:
@@ -36,7 +37,8 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override; 
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TArray<TSubclassOf<class AAbilityBase>> AbilityClassArray;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities", meta = (AllowPrivateAccess = "true"))
 		TArray<TSubclassOf<class AAbilityBase>> DefaultAbilityArray;
@@ -44,9 +46,9 @@ public:
 		USceneComponent* DroneSpawnPoint;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Component", meta = (AllowPrivateAccess = "true"))
 		class USphereComponent* SphereComp;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TArray<class UTexture2D*> RandTextureArray;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TArray<TSubclassOf<class AAbilityBase>> RandomAbilityArray;
 	UPROPERTY()
 		TSubclassOf<class AAbilityBase> SelectedAbility;
@@ -62,4 +64,21 @@ public:
 		FTimerHandle DroneAttackTimer;
 	UPROPERTY()
 		FTimerHandle HealTimer;
+	UPROPERTY()
+		bool bCheckDistance;
+	UPROPERTY()
+		float DroneTimer;
+	UPROPERTY()
+		float LocalDeltaTime;
+public:
+	// Server
+	class UNetworkManager* GetNetworkManager() const;
+	void RecvMakeRange(class AGameCharacter* owner, int abilityIdx, FVector loc);
+	void RecvMakeHeal(int abilityIdx);
+	void RecvUpdateHP(int hp);
+	
+	class AAbilityBase* GetDrone();
+	void RecvMakeDrone(int64 idx, AGameCharacter* owner);
+	void RecvSearchDrone(FVector loc);
+	void RecvMoveDrone(FVector loc);
 };

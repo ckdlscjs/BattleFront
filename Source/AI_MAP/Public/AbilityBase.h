@@ -15,6 +15,15 @@ enum class AbilityType : uint8
 	Heal UMETA(DisplayName = "Heal"),
 	Guard UMETA(DisplayName = "Guard")
 };
+UENUM(BlueprintType)
+enum class DroneState : uint8
+{
+	None UMETA(DisplayName = "None"),
+	Search UMETA(DisplayName = "Search"),
+	Move UMETA(DisplayName = "Move"),
+	Attack UMETA(DisplayName = "Attack"),
+	Return UMETA(DisplayName = "Return")
+};
 UCLASS()
 class AI_MAP_API AAbilityBase : public AActor
 {
@@ -35,8 +44,8 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	virtual void Attack(FVector& Location) { return; };// ÇÊ ±¸Çö
-	virtual void Attack() { return; };// ÇÊ ±¸Çö
+	virtual void Attack(FVector& Location) { return; };// ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+	virtual void Attack() { return; };// ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	virtual bool CheckTime(float DTimer);
 	virtual int32 GetProjCount();
 	AbilityType GetType();
@@ -50,6 +59,13 @@ public:
 	virtual void ReturnToTarget(FVector& Location) { return; };
 	virtual void ChargeGuardPoint() { return; };
 	virtual float GetAbilityDetail() { return 0.f; };
+	virtual bool GetAttachedState() { return bAttachedState; };
+	virtual bool MoveToTarget() { return false; };
+	virtual void ReturnDrone(FVector& Location) { return; };
+	virtual void SetDroneNoneState() { return; }
+	virtual void SetAttachedState(bool bState) { bAttachedState = bState; };
+	virtual DroneState GetDroneState() { return DroneState::None; };
+	virtual void SetDroneStateReturn() { return; };
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		class UCapsuleComponent* CapsuleCompoent;
@@ -57,6 +73,7 @@ protected:
 		UStaticMeshComponent* StaticMesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components",meta = (AllowPrivateAccess = "true"))
 		class UProjectileMovementComponent* ProjectileMovement;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Status", meta = (AllowPrivateAccess = "true"))
 		float Damage;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Status", meta = (AllowPrivateAccess = "true"))
@@ -71,10 +88,16 @@ protected:
 		FString Name;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status", meta = (AllowPrivateAccess = "true"))
 		int32 MyAbilityLevel;
+	
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status", meta = (AllowPrivateAccess = "true"))
+		bool bAttachedState;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Type", meta = (AllowPrivateAccess = "true"))
 		AbilityType Type;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Texture", meta = (AllowPrivateAccess = "true"))
 		class UTexture2D* AbilityTexture;
 
+public:
+	class UNetworkManager* GetNetworkManager() const;
 };

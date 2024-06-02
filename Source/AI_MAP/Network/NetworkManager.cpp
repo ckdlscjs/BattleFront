@@ -13,6 +13,10 @@
 //#include "Weapon.h"
 //#include "Team_AICharacter_Recv.h"
 
+//#include "GenericPlatform/GenericPlatformMisc.h"
+#include "Kismet/KismetSystemLibrary.h"
+
+
 UNetworkManager::UNetworkManager()
 {
 	//auto BP_MyCharacter = ConstructorHelpers::FClassFinder<AGameCharacter>(TEXT("/Game/BP/MyGameCharacter.MyGameCharacter_C"));
@@ -88,6 +92,30 @@ void UNetworkManager::DisconnectFromGameServer()
 	}*/
 }
 
+void UNetworkManager::ExitGame()
+{
+	//FGenericPlatformMisc::RequestExit(false);
+
+	GameServerSession->Disconnect();
+
+	if (Socket)
+	{
+		ISocketSubsystem* SocketSubsystem = ISocketSubsystem::Get();
+		SocketSubsystem->DestroySocket(Socket);
+		Socket = nullptr;
+	}
+
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		APlayerController* PlayerController = World->GetFirstPlayerController();
+		if (PlayerController)
+		{
+			UKismetSystemLibrary::QuitGame(World, PlayerController, EQuitPreference::Quit, false);
+		}
+	}
+}
+
 void UNetworkManager::HandleRecvPackets()
 {
 	if (Socket == nullptr || GameServerSession == nullptr)
@@ -127,7 +155,7 @@ void UNetworkManager::HandleSpawn(const Protocol::S_ENTER_GAME& EnterGamePkt)
 		return;
 
 	HandleSpawn(EnterGamePkt.player(), true);
-	
+
 	auto& myPlayer = GameMode->GetMyPlayer();
 	if (!myPlayer)
 		return;
@@ -144,26 +172,53 @@ void UNetworkManager::HandleSpawn(const Protocol::S_SPAWN& SpawnPkt)
 
 void UNetworkManager::HandleDespawn(uint64 ObjectId)
 {
-	/*if (Socket == nullptr || GameServerSession == nullptr)
+	//if (Socket == nullptr || GameServerSession == nullptr)
+	//	return;
+
+	//auto* World = GetWorld();
+	//if (World == nullptr)
+	//	return;
+
+	//AGameCharacter** FindActor = Players.Find(ObjectId);
+	//if (FindActor == nullptr)
+	//	return;
+
+	//World->DestroyActor(*FindActor);
+
+	if (Socket == nullptr || GameServerSession == nullptr)
 		return;
 
 	auto* World = GetWorld();
 	if (World == nullptr)
 		return;
 
-	AGameCharacter** FindActor = Players.Find(ObjectId);
+	if (!GameMode)
+		return;
+
+	AGameCharacter** FindActor = GameMode->GetPlayers().Find(ObjectId);
 	if (FindActor == nullptr)
 		return;
 
-	World->DestroyActor(*FindActor);*/
+	World->DestroyActor(Cast<AActor>(*FindActor));
 }
 
 void UNetworkManager::HandleDespawn(const Protocol::S_DESPAWN& DespawnPkt)
 {
-	/*for (auto& ObjectId : DespawnPkt.object_ids())
+	for (auto& ObjectId : DespawnPkt.object_ids())
 	{
 		HandleDespawn(ObjectId);
-	}*/
+	}
+}
+
+void UNetworkManager::HandleLeaveGame(const Protocol::S_LEAVE_GAME& leavePkt)
+{
+	GameServerSession->Disconnect();
+	if (Socket)
+	{
+		ISocketSubsystem* SocketSubsystem = ISocketSubsystem::Get();
+		SocketSubsystem->DestroySocket(Socket);
+		Socket = nullptr;
+	}
 }
 
 void UNetworkManager::HandleMove(const Protocol::S_MOVE& MovePkt)
@@ -200,12 +255,12 @@ void UNetworkManager::HandleHit(const Protocol::S_HIT& HitPkt)
 	if (FindActor == nullptr)
 		return;*/
 
-	// TODO : 맞은플레이어 데미지 입는 작업
-	//AGameCharacter* TargetPlayer = *FindActor;
-	//AActor* TargetActor = Cast<AActor>(*FindActor);
-	//TSubclassOf<UDamageType> const DmgType = UDamageType::StaticClass();
-	//FDamageEvent DmgEvent(DmgType);
-	//TargetPlayer->TakeDamage(TargetPlayer->GetDamage(), DmgType ,TargetActor->GetInstigatorController(), )
+		// TODO : 맞은플레이어 데미지 입는 작업
+		//AGameCharacter* TargetPlayer = *FindActor;
+		//AActor* TargetActor = Cast<AActor>(*FindActor);
+		//TSubclassOf<UDamageType> const DmgType = UDamageType::StaticClass();
+		//FDamageEvent DmgEvent(DmgType);
+		//TargetPlayer->TakeDamage(TargetPlayer->GetDamage(), DmgType ,TargetActor->GetInstigatorController(), )
 
 	if (!GameMode)
 		return;
@@ -234,6 +289,122 @@ void UNetworkManager::HandleDead(const Protocol::S_PLAYERDEAD& playerDeadPkt)
 	GameMode->SetPlayerDead(playerDeadPkt);
 }
 
+void UNetworkManager::HandleSkillRange(const Protocol::S_PLAYERSKILL_RANGE& rangeSkillPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	GameMode->SetPlayerSKill(rangeSkillPkt);
+}
+
+void UNetworkManager::HandleSkillGuard(const Protocol::S_PLAYERSKILL_GUARD& guardSkillPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	GameMode->SetPlayerSKill(guardSkillPkt);
+}
+
+void UNetworkManager::HandleSkillHeal(const Protocol::S_PLAYERSKILL_HEAL& healSkillPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	GameMode->SetPlayerSKill(healSkillPkt);
+}
+
+void UNetworkManager::HandleHealed(const Protocol::S_PLAYERHEAL& healpkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	GameMode->SetUpdatedHeal(healpkt);
+}
+
+void UNetworkManager::HandleMakeDrone(const Protocol::S_MAKEDRONE& makeDrnPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	GameMode->SetMakeDrone(makeDrnPkt);
+}
+
+void UNetworkManager::HandleSearchDrone(const Protocol::S_SEARCHDRONE& searchDrnPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+	GameMode->SetSearchDrone(searchDrnPkt);
+}
+
+void UNetworkManager::HandleMoveDrone(const Protocol::S_MOVEDRONE& moveDrnPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	GameMode->SetMoveDrone(moveDrnPkt);
+}
+
+void UNetworkManager::HandleReturnDrone(const Protocol::S_RETURNDRONE& retDrnPkt)
+{
+}
+
+void UNetworkManager::HandleAISpawn(const Protocol::S_AISPAWN_RANDOM& AiSpawnPkt)
+{
+	if (!GameMode)
+		return;
+
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	if (GameMode->GetEnemies().Find(AiSpawnPkt.object_id()) != nullptr)
+		return;
+
+	GameMode->AddSpawnActor(AiSpawnPkt);
+}
+
+void UNetworkManager::HandleAISpawn(const Protocol::S_AISPAWN_PATROL& AiSpawnPkt)
+{
+	if (!GameMode)
+		return;
+
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	if (GameMode->GetEnemies().Find(AiSpawnPkt.object_id()) != nullptr)
+		return;
+
+	GameMode->AddSpawnActor(AiSpawnPkt);
+}
+
+void UNetworkManager::HandleAISpawn(const Protocol::S_AISPAWN_BOSS& AiSpawnPkt)
+{
+	if (!GameMode)
+		return;
+
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	if (GameMode->GetEnemies().Find(AiSpawnPkt.object_id()) != nullptr)
+		return;
+
+	GameMode->AddSpawnActor(AiSpawnPkt);
+}
+
+/*
 void UNetworkManager::HandleAISpawn(const Protocol::ObjectInfo& AiInfo)
 {
 	if (!GameMode)
@@ -247,29 +418,7 @@ void UNetworkManager::HandleAISpawn(const Protocol::ObjectInfo& AiInfo)
 
 	GameMode->AddSpawnActor(AiInfo);
 }
-
-void UNetworkManager::HandleAISpawn(const Protocol::S_AISPAWNRANDOM& AiRandomSpawnPkt)
-{
-	//for (auto& enemy : AiRandomSpawnPkt.enemies())
-	//{
-	//	HandleAISpawn(enemy);
-	//}
-
-	if (!GameMode)
-		return;
-
-	if (Socket == nullptr || GameServerSession == nullptr)
-		return;
-
-	if (GameMode->GetEnemies().Find(AiRandomSpawnPkt.object_id()) != nullptr)
-		return;
-
-	GameMode->AddSpawnActor(AiRandomSpawnPkt);
-}
-
-void UNetworkManager::HandleAISpawn(const Protocol::S_AISPAWNPATROL& AiPatrolSpawnPkt)
-{
-}
+*/
 
 void UNetworkManager::HandleAIMove(const Protocol::S_AIMOVE& AIMovePkt)
 {
@@ -381,7 +530,7 @@ void UNetworkManager::HandleAIHit(const Protocol::S_AIHIT& AIHitPkt)
 	auto* World = GetWorld();
 	if (World == nullptr)
 		return;
-	
+
 	GameMode->SetAIHit(AIHitPkt);
 }
 
@@ -428,4 +577,19 @@ void UNetworkManager::HandleAIDead(const Protocol::S_AIDEAD& AIDeadPkt)
 		return;
 
 	GameMode->SetAIDead(AIDeadPkt);
+}
+
+void UNetworkManager::HandleAIKnocksBack(const Protocol::S_AI_KNOCKS_BACK& AIKnocksBock)
+{
+	if (!GameMode)
+		return;
+
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	auto* World = GetWorld();
+	if (World == nullptr)
+		return;
+
+	GameMode->SetKnocksBack(AIKnocksBock);
 }
