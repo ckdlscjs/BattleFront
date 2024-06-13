@@ -41,24 +41,9 @@ void AGrenadeFireArea::Tick(float DeltaTime)
 	}
 }
 
-void AGrenadeFireArea::BeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void AGrenadeFireArea::SetFireDamage(float Amount)
 {
-	auto MyOwner = GetOwner();
-	if (MyOwner != nullptr)
-	{
-		//OverlapActors;
-	
-		if (OtherActor && OtherActor != this && OtherActor != MyOwner)
-		{
-			/*DamagedActor = OtherActor;*/
-		
-		}
-	}
-}
-
-void AGrenadeFireArea::EndOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
-{
-	
+	Damage = Amount;
 }
 
 void AGrenadeFireArea::TakePlayerDamage()

@@ -18,7 +18,10 @@
 #include "Particles/ParticleSystemComponent.h"
 #include "Team_AIGameMode.h"
 #include "Materials/MaterialInstance.h"
-
+#include "PaperSpriteComponent.h"
+#include "DamageTextActor.h"
+#include "HealthBar.h"
+#include "Components/WidgetComponent.h"
 // Sets default values
 ATeam_AICharacterBase::ATeam_AICharacterBase()
 {
@@ -39,7 +42,7 @@ ATeam_AICharacterBase::ATeam_AICharacterBase()
 	PatrolRadius = 3000.0f;
 	ProjectileSpeed = 300.0f;
 	Level = 1;
-	EnemyStatDecreaseAmount = 0.3f;
+	EnemyStatDecreaseAmount = 0.1f;
 	/*
 	ProjectileSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("ProjectileSpawnPoint"));
 	ProjectileSpawnPoint->SetupAttachment(RootComponent);
@@ -51,21 +54,40 @@ ATeam_AICharacterBase::ATeam_AICharacterBase()
 	//AttackParticleSystem->SetupAttachment(RootComponent);
 	//AttackParticleSystem->bAutoActivate = false;
 	HitOverlayTime = 1.0f;
+
+	PaperSprite = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("IconSprite"));
+	PaperSprite->SetupAttachment(RootComponent);
+	DamageTextPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Damage Text Spawn"));
+	DamageTextPoint->SetupAttachment(RootComponent);
+	HealthBarWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
+	HealthBarWidget->SetupAttachment(RootComponent);
+
+	PaperSprite->SetRelativeLocation({ 0, 0, 2000 });
+	PaperSprite->SetRelativeRotation({0, 90, -90});
+	PaperSprite->SetRelativeScale3D({ 10, 10, 10});
 }
 
 // Called when the game starts or when spawned
 void ATeam_AICharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
+	if (HealthBarWidgetClass != nullptr)
+	{
+		HealthBarWidget->SetWidgetClass(HealthBarWidgetClass);
+		HealthBar = Cast<UHealthBar>(HealthBarWidget->GetUserWidgetObject());
+	}
 	for (const auto& iter : K2_GetComponentsByClass(UParticleSystemComponent::StaticClass()))
 		ParticleSystems.Add(TTuple<FString, UParticleSystemComponent*>(iter->GetName(), Cast<UParticleSystemComponent>(iter)));
 	BehviorSpawn();
 	//TODO : GetGameLevel
 	SetStat(Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()))->GetGameLevel());
+	SetHealthBarPercent(MaxHP, CurHp);
 	ATeam_AIController* AIController = Cast<ATeam_AIController>(GetController());
 	if (!AIController)
 		return;
 	AIController->SetState(ECharacterState::IDLE);
+	
+
 }
 
 void ATeam_AICharacterBase::TakenDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
@@ -73,14 +95,14 @@ void ATeam_AICharacterBase::TakenDamage(AActor* DamagedActor, float Damage, cons
 	if (HitOverlayMaterial)
 		GetMesh()->SetOverlayMaterial(HitOverlayMaterial);
 
-	FTimerHandle OverlayHandle;
+	
 	GetWorldTimerManager().SetTimer
 	(
-		OverlayHandle,
-		[&]() -> void
+		DamageOverlayHandle,
+		[this]() -> void
 		{
 			GetMesh()->SetOverlayMaterial(nullptr);
-			GetWorldTimerManager().ClearTimer(OverlayHandle);
+			GetWorldTimerManager().ClearTimer(DamageOverlayHandle);
 		},
 		HitOverlayTime,
 		false
@@ -91,7 +113,7 @@ void ATeam_AICharacterBase::TakenDamage(AActor* DamagedActor, float Damage, cons
 		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("TakenDamage:%f"), Damage));
 		CurHp -= Damage;
 
-	
+		
 		Protocol::C_AIDAMAGED AIDmgedPkt;
 		{
 			AIDmgedPkt.set_object_id(pos.object_id());
@@ -107,11 +129,13 @@ void ATeam_AICharacterBase::TakenDamage(AActor* DamagedActor, float Damage, cons
 
 				GetNetworkManager()->SendPacket(AIDeadPkt);
 			}
-
+			//Send DropExp Packet to DamageCauser
 			//SendTest("Dead");
 			BehaviorDead();
 		}
 	}
+	CreateDamageWidget(Damage);
+	SetHealthBarPercent(MaxHP, CurHp);
 }
 
 void ATeam_AICharacterBase::SetStat(int32 CharacterLevel)
@@ -124,11 +148,26 @@ void ATeam_AICharacterBase::SetStat(int32 CharacterLevel)
 	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("CharacterLevel : %d"), RowData->Level));
 	Level = RowData->Level;
 	MaxHP = RowData->MaxHP * EnemyStatDecreaseAmount;
-	//CurHp = MaxHP;
-	CurHp = 1.0f;
+	CurHp = MaxHP;
+	//CurHp = 1.0f;
 	Attack = RowData->Attack * EnemyStatDecreaseAmount;
 	Armor = RowData->Armor * EnemyStatDecreaseAmount;
 	Speed = RowData->Speed * EnemyStatDecreaseAmount;
+	DropExp = RowData->DropExp;
+}
+
+void ATeam_AICharacterBase::CreateDamageWidget(float DamageAmount)
+{
+	DamageTextActor = GetWorld()->SpawnActor<ADamageTextActor>(DamageTextClass, DamageTextPoint->GetComponentLocation(), FRotator::ZeroRotator);
+	DamageTextActor->SpawnDamageText(DamageAmount);
+}
+
+void ATeam_AICharacterBase::SetHealthBarPercent(float Max, float Cur)
+{
+	if (HealthBar != nullptr)
+	{
+		HealthBar->SetPercentage(Max, Cur);
+	}
 }
 
 // Called every frame
@@ -232,6 +271,7 @@ void ATeam_AICharacterBase::BehaviorDead()
 	ATeam_AIController* AIController = Cast<ATeam_AIController>(GetOwner());
 	if (!AIController)
 		return;
+	AIController->StopMovement();
 	UBehaviorTreeComponent* BehaviorTree = Cast<UBehaviorTreeComponent>(AIController->GetBrainComponent());
 	if (!BehaviorTree)
 		return;

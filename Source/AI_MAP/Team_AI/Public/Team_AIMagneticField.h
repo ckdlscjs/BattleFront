@@ -5,6 +5,7 @@
 #include "AI_MAP.h"
 #include "GameFramework/Actor.h"
 #include "Team_AIMagneticField.generated.h"
+/*
 UENUM(BlueprintType)
 enum class ESafetyState : uint8
 {
@@ -12,7 +13,7 @@ enum class ESafetyState : uint8
 	SHRINK UMETA(DisplayName = "Shrink"),
 	END UMETA(DisplayName = "End"),
 };
-
+*/
 UENUM(BlueprintType)
 enum class EMagneticPhase: uint8
 {
@@ -29,14 +30,14 @@ UENUM(BlueprintType)
 enum class EPhaseTime : uint8
 {
 	Default = 0,
-	PHASEDEFULAT = 0 UMETA(DisplayName = "Time0"),
-	PHASE0 = 10 UMETA(DisplayName = "Time1"),
-	PHASE1 = 8 UMETA(DisplayName = "Time2"),
-	PHASE2 = 6 UMETA(DisplayName = "Time3"),
-	PHASE3 = 4 UMETA(DisplayName = "Time4"),
-	PHASE4 = 2 UMETA(DisplayName = "Time5"),
+	PHASEDEFULAT = 10 UMETA(DisplayName = "Time0"),
+	PHASE0 = 8 UMETA(DisplayName = "Time1"),
+	PHASE1 = 6 UMETA(DisplayName = "Time2"),
+	PHASE2 = 4 UMETA(DisplayName = "Time3"),
+	PHASE3 = 2 UMETA(DisplayName = "Time4"),
+	PHASE4 = 0 UMETA(DisplayName = "Time5"),
 };
-static TArray<TPair<const EMagneticPhase, const EPhaseTime>> MagenticPhase;
+
 UCLASS()
 class AI_MAP_API ATeam_AIMagneticField : public AActor
 {
@@ -46,42 +47,55 @@ public:
 	// Sets default values for this actor's properties
 	ATeam_AIMagneticField();
 	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	virtual void PostInitializeComponents() override;
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		TArray<AActor*> OverlapActors;
-
 private:
 	UFUNCTION(BlueprintCallable, CallInEditor)
-		void RandomPoint();
+	void RandomPoint();
 	UFUNCTION(BlueprintCallable, CallInEditor)
-		void ShrinkSafetyField(float DeltaTime);
-	UFUNCTION()
-		void OnMagneticFieldBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	UFUNCTION()
-		void OnMagneticFieldEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-	UFUNCTION()
-		void OnSafetySphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	UFUNCTION()
-		void OnSafetySphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	void ShrinkSafetyField();
+	UFUNCTION(BlueprintCallable, CallInEditor)
+	void PauseSafetyField();
+	void UpdateSafetyFieldValue();
+public:
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-		UStaticMeshComponent* MagneticField;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-		UStaticMeshComponent* SafetySphere;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-		FVector RandPos;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-		TSet<AActor*> OverlapedActors;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-		int32 CurrentPhase;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-		ESafetyState CurrentState;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-		float CurrentTime;
-	/*UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-		float */
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UStaticMeshComponent* MagneticField;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UStaticMeshComponent* SafetySphere;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector RandPos;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSet<AActor*> OverlapedActors;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 CurrentPhase;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//ESafetyState CurrentState;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float CurrentTime;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FTimerHandle PauseTimer;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float PauseTime;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FTimerHandle MagenticTimer;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FTimerHandle DamageTimer;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DamageDelay;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector CenterCur;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector CenterNext;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UMaterialParameterCollection* FMC_SafetyField;
+
+	TArray<TPair<const EMagneticPhase, const EPhaseTime>> MagenticPhase;
 };

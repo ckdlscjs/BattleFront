@@ -39,7 +39,10 @@ void ATeam_AIBuildingBase::PostInitializeComponents()
 void ATeam_AIBuildingBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	for (const auto& iter : Roofs)
+	{
+		iter->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
 }
 
 // Called every frame

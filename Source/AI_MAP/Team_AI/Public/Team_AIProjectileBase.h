@@ -28,16 +28,21 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	float Damage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FTimerHandle LifeTimeHandle;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float LifeTime;
 private:
 	UFUNCTION()
 	void OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	UFUNCTION()
-	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	/*UFUNCTION()
+	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);*/
 	UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true))
 	UStaticMeshComponent* ProjectileMesh;
 	UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true))
 	class USphereComponent* SphereCollision;
 	UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true))
 	class UProjectileMovementComponent* ProjectileMovementComponent;
+
 
 };

@@ -94,3 +94,8 @@ void UHUDWidget::UpdateGuardPoint(int32 Cur, int32 Max)
 	MaxGuardText->SetText(MaxText);
 	CurrentGuardText->SetText(CurText);
 }
+
+void UHUDWidget::SetCharacterLevel(int32 Level)
+{
+	CharacterWidget->SetCharacterLevel(Level);
+}

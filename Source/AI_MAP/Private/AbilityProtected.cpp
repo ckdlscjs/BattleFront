@@ -32,3 +32,11 @@ void AAbilityProtected::ChargeGuardPoint()
 {
 	GuardPoint = ((MyAbilityLevel + 1) * 5) + AbilityPoint;
 }
+
+void AAbilityProtected::AbilityLevelUp()
+{
+	Super::AbilityLevelUp();
+	AbilityPoint++;;
+	GuardPoint = ((MyAbilityLevel + 1) * 5) + AbilityPoint;
+	CoolTime -= 3;
+}

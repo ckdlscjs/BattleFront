@@ -49,6 +49,7 @@ void AAbilityGranade::ProjectileBeginOverlap(UPrimitiveComponent* HitComp, AActo
 	}
 	
 	AGrenadeFireArea* FireArea = GetWorld()->SpawnActor<AGrenadeFireArea>(FireAreaClass, Loc,FRotator::ZeroRotator);
+	FireArea->SetFireDamage(Damage);
 	auto MyOwner = GetOwner();
 	FireArea->SetOwner(MyOwner);
 	Destroy();
@@ -75,30 +76,19 @@ void AAbilityGranade::SetLocation(FVector& Location)
 	StartLocation.Z += 1500.f;
 	FVector RandVec = FMath::VRand();
 	RandVec.Z = 0;
-	//SetActorLocation(Location);
 	CapsuleCompoent->SetGenerateOverlapEvents(true);
 
 	ProjectileMovement->AddForce(RandVec * 100000);
-
-
-	//float Force = FMath::RandRange(200, 500);
-	//ProjectileMovement->AddForce(Temp * Force);
-	/*FVector StartLocation = Location;
-	SetActorLocation(StartLocation);*/
-
-	/*float X_Max = Location.X + 300.f;
-	float Y_Max = Location.Y + 300.f;
-	float X_Min = Location.X - 300.f;
-	float Y_Min = Location.Y - 300.f;
-	float X_Rand = FMath::RandRange(X_Min, X_Max);
-	float Y_Rand = FMath::RandRange(Y_Min, Y_Max);
-	Location.X = X_Rand;
-	Location.Y = Y_Rand;
-	Location.Z = 0.f;
-	FVector TargetLocation = Location;
-	FVector Temp = TargetLocation - StartLocation;*/
-
-//	ProjectileMovement->AddForce(Temp * 300);
-	
 	return;
+}
+
+void AAbilityGranade::AbilityLevelUp()
+{
+	Super::AbilityLevelUp();
+	Damage = (MyAbilityLevel + 4) * 2;
+}
+
+int32 AAbilityGranade::GetProjCount()
+{
+	return ProjectileCount;
 }

@@ -2,16 +2,14 @@
 
 
 #include "AbilityBase.h"
-
+#include "Protocol.pb.h"
+#include "NetworkManager.h"
 #include "Components/CapsuleComponent.h"
-#include "Misc/App.h"
 // Sets default values
 AAbilityBase::AAbilityBase()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
-	
 	MyAbilityLevel = 0;
 	FireTime = 0.f;
 }
@@ -20,7 +18,7 @@ AAbilityBase::AAbilityBase()
 void AAbilityBase::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 }
 
 // Called every frame
@@ -29,7 +27,6 @@ void AAbilityBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	
 }
-
 
 bool AAbilityBase::CheckTime(float DTimer)
 {
@@ -48,10 +45,6 @@ bool AAbilityBase::CheckTime(float DTimer)
 	return false;
 }
 
-int32 AAbilityBase::GetProjCount()
-{
-	return ProjectileCount;
-}
 
 AbilityType AAbilityBase::GetType()
 {
@@ -87,4 +80,3 @@ UNetworkManager* AAbilityBase::GetNetworkManager() const
 {
 	return GetGameInstance()->GetSubsystem<UNetworkManager>();
 }
-

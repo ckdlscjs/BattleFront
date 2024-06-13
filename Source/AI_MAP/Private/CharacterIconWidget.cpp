@@ -49,3 +49,9 @@ void UCharacterIconWidget::UpdateExpBar(int32 MaxExp, int32 CurrExp)
 	float Exp = float(CurrExp) / (float)MaxExp;
 	ExpBar->SetPercent(Exp);
 }
+
+void UCharacterIconWidget::SetCharacterLevel(int32 MyLevel)
+{
+	FText Level = FText::FromString(FString::FromInt(MyLevel));
+	CharLevel->SetText(Level);
+}

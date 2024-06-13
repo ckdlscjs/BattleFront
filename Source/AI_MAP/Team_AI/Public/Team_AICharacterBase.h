@@ -94,11 +94,27 @@ protected:
 
 private:
 	UFUNCTION(BlueprintCallable)
+
 	void TakenDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
 	void SetStat(int32 CharacterLevel);
-public:
 
+public:
+	void CreateDamageWidget(float DamageAmount);
+	void SetHealthBarPercent(float Max, float Cur);
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DamageActor", meta = (AllowPrivateAccess = "true"))
+		class ADamageTextActor* DamageTextActor;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DamageActor", meta = (AllowPrivateAccess = "true"))
+		TSubclassOf<class ADamageTextActor> DamageTextClass;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Socket", meta = (AllowPrivateAccess = true))
+		USceneComponent* DamageTextPoint;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Widget", meta = (AllowPrivateAccess = "true"))
+		TSubclassOf<UUserWidget> HealthBarWidgetClass;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Widget", meta = (AllowPrivateAccess = "true"))
+		class UHealthBar* HealthBar;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Widget", meta = (AllowPrivateAccess = "true"))
+		class UWidgetComponent* HealthBarWidget;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		FName TargetTag;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -127,6 +143,8 @@ protected:
 		float Armor;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float Speed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float DropExp;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	float SpeedCurrent;
 
@@ -164,6 +182,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<AActor*> Players;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FTimerHandle DamageOverlayHandle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UPaperSpriteComponent* PaperSprite;
 private:
 
 

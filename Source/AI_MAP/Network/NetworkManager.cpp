@@ -169,7 +169,7 @@ void UNetworkManager::HandleSpawn(const Protocol::S_SPAWN& SpawnPkt)
 		HandleSpawn(Player, false);
 	}
 }
-
+/*
 void UNetworkManager::HandleDespawn(uint64 ObjectId)
 {
 	//if (Socket == nullptr || GameServerSession == nullptr)
@@ -195,18 +195,23 @@ void UNetworkManager::HandleDespawn(uint64 ObjectId)
 	if (!GameMode)
 		return;
 
-	AGameCharacter** FindActor = GameMode->GetPlayers().Find(ObjectId);
+	auto FindActor = GameMode->GetPlayers()[ObjectId];
 	if (FindActor == nullptr)
 		return;
 
-	World->DestroyActor(Cast<AActor>(*FindActor));
+	World->DestroyActor(Cast<AActor>(FindActor));
 }
-
+*/
 void UNetworkManager::HandleDespawn(const Protocol::S_DESPAWN& DespawnPkt)
 {
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+	if (!GameMode)
+		return;
 	for (auto& ObjectId : DespawnPkt.object_ids())
 	{
-		HandleDespawn(ObjectId);
+		GameMode->SetPlayerDespawn(ObjectId);
+		//HandleDespawn(ObjectId);
 	}
 }
 

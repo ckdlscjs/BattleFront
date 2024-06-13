@@ -31,6 +31,7 @@ protected:
 	//	UStaticMeshComponent* Roof;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray<UStaticMeshComponent*> Roofs;
+
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	//	TArray<class UBoxComponent*> CollisionBoxes;
 private:

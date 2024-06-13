@@ -23,6 +23,7 @@ public:
 	void UpdateHpBar(int32 MaxHP, int32 CurrHp);
 	void UpdateExpBar(float MaxExp, float CurrExp);
 	void UpdateGuardPoint(int32 Cur, int32 Max);
+	void SetCharacterLevel(int32 Level);
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class UCharacterIconWidget* CharacterWidget;

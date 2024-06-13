@@ -73,10 +73,12 @@ public:
 	const bool IsDead();
 
 	UWorld* GetMyWorld();
+	void CreateDamageWidget(float DamageAmount);
 	void SetSpringArmLocation(const FVector& Location);
 	void AddSpringArmRotaion(const FRotator& Rotator);
 	void SaveSpringArmRotation();
 	void SetRandomTextureArray();
+	void SpawnHealEffect();
 	void DetachSpringArm();
 	void AttachSpringArm();
 	void ResetSpringArmRotation();
@@ -88,6 +90,7 @@ public:
 	void SetCharacterMovementRotation(bool bState);
 	void Fire();
 	void UpdateHpWiget();
+	void DeathEvent();
 	void SetGuardPoint(float Guard);
 	class AWeapon* GetMyWeapon() const;
 	void ExpUp(float Exp);//Test
@@ -106,7 +109,22 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetVisibility(bool visible);
+	UFUNCTION(BlueprintCallable)
+		void CharacterMaxHpUp(float value);
+	UFUNCTION(BlueprintCallable)
+		void CharacterLevelUp();
+	UFUNCTION(BlueprintCallable)
+		void CharacterAttackUp(float value);
+	UFUNCTION(BlueprintCallable)
+		void CharacterEatItem(float value);
 
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UPaperSpriteComponent* PaperSprite;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UParticleSystemComponent* LevelUpParticleSystemComponent;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		class UNiagaraSystem* HealParticles;
 private:
 	UFUNCTION()
 		void TakenDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigateBy, AActor* DamageCauser);
@@ -114,10 +132,24 @@ private:
 	class USphereComponent* RecognizeVisibility;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* SpringArmComp;
+	UPROPERTY(VisibleAnywhere , Category = "Components", meta = (AllowPrivateAccess = "true"))
+		class USceneCaptureComponent2D* SceneCaptureComponent;
+	UPROPERTY(EditAnywhere, Category = "Capture")
+		class UTextureRenderTarget2D* RenderTarget;
+	UPROPERTY(VisibleAnywhere)
+		bool bIsCapture;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DamageActor", meta = (AllowPrivateAccess = "true"))
+		class ADamageTextActor* DamageTextActor;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DamageActor", meta = (AllowPrivateAccess = "true"))
+		TSubclassOf<class ADamageTextActor> DamageTextClass;
+
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	class UCameraComponent* CameraComp;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Socket", meta = (AllowPrivateAccess = true))
 		USceneComponent* AbilitySpawnPoint;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Socket", meta = (AllowPrivateAccess = true))
+		USceneComponent* DamageTextPoint;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = true))
 		class AWeapon* Weapon;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Manager", meta = (AllowPrivateAccess = "true"))
@@ -136,13 +168,22 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
 		float MaxGuardPoint;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
+		class UWidgetComponent* HealthBarWidget;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
 		float CurrentGuardPoint;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Widget", meta = (AllowPrivateAccess = "true"))
 		TSubclassOf<UUserWidget> MainHUDWidgetClass;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Widget", meta = (AllowPrivateAccess = "true"))
+		TSubclassOf<UUserWidget> HealthBarWidgetClass;
+
 	UPROPERTY()
 		class UHUDWidget* MainHUD;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Widget", meta = (AllowPrivateAccess = "true"))
+		class UHealthBar* HealthBar;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Texture", meta = (AllowPrivateAccess = "true"))
-		TArray<class UTexture2D*> TextureArray; // GameMode�� �̵���Ű�°� ���ƺ���
+		TArray<class UTexture2D*> TextureArray; 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		int32 MaxNum;
@@ -175,7 +216,9 @@ private:
 		class AAbilityBomb* Bomd;
 	UPROPERTY()
 		bool bIsLevelUp;
-
+	UPROPERTY()
+		bool bChangeColor;
+		
 public:
 	bool IsMyPlayer();
 

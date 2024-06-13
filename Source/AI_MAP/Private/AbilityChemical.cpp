@@ -7,7 +7,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Particles/ParticleSystemComponent.h"
-
+#include "DrawDebugHelpers.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -20,11 +20,9 @@ AAbilityChemical::AAbilityChemical()
 	ChemicalParticle = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particle"));
 	ChemicalParticle->SetupAttachment(RootComponent);
 	MyAbilityLevel = 0;
-	Damage = 0.0f;
 	CoolTime = 7.f - MyAbilityLevel;
 	ProjectileCount = 1;
 	Type = AbilityType::Range;
-	//ProjectileMovement->ProjectileGravityScale = 0.0f;
 	ChemicalDamage = 1.0f;
 	Duration = 10.f;
 }
@@ -32,10 +30,7 @@ AAbilityChemical::AAbilityChemical()
 void AAbilityChemical::BeginPlay()
 {
 	Super::BeginPlay();
-	GetWorldTimerManager().SetTimer(DamageTimerHandle, this, &AAbilityChemical::TakePlayerDamage, 0.5f, true);
-	//SphereCollision->OnComponentBeginOverlap.AddDynamic(this, &AAbilityChemical::ProjectileBeginOverlap);
-	//SphereCollision->OnComponentEndOverlap.AddDynamic(this, &AGrenadeFireArea::EndOverlap);
-
+	GetWorldTimerManager().SetTimer(DamageTimerHandle, this, &AAbilityChemical::TakePlayerDamage, 1.5f, true);
 }
 
 void AAbilityChemical::Tick(float DeltaTime)
@@ -49,22 +44,6 @@ void AAbilityChemical::Tick(float DeltaTime)
 	}
 }
 
-
-void AAbilityChemical::ProjectileBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-{
-	//auto MyOwner = GetOwner();
-	//if (MyOwner != nullptr)
-	//{
-
-	//	if (OtherActor && OtherActor != this && OtherActor != MyOwner)
-	//	{
-	//		//DamagedActor = OtherActor;		
-	//		GetWorldTimerManager().SetTimer(DamageTimerHandle, this, &AAbilityChemical::TakePlayerDamage, 0.5f, true);
-	//	}
-	//}
-}
-
-
 void AAbilityChemical::SetLocation(FVector& Location)
 {
 	float X_Min = Location.X - 500.f;
@@ -77,6 +56,19 @@ void AAbilityChemical::SetLocation(FVector& Location)
 	SetActorLocation(Target);
 }
 
+void AAbilityChemical::AbilityLevelUp()
+{
+	Super::AbilityLevelUp();
+	CoolTime = 7.f - MyAbilityLevel;
+	ChemicalDamage++;
+	Duration += 2;
+}
+
+int32 AAbilityChemical::GetProjCount()
+{
+	return ProjectileCount;
+}
+
 void AAbilityChemical::TakePlayerDamage()
 {
 	TArray <AActor*> OverlapActors;
@@ -87,7 +79,7 @@ void AAbilityChemical::TakePlayerDamage()
 	{
 		auto MyOwnerInstigator = MyOwner->GetInstigatorController();
 		auto DamageTypeClass = UDamageType::StaticClass();
-		//UGameplayStatics::ApplyDamage(DamagedActor, Damage, MyOwnerInstigator, this, DamageTypeClass);
+		
 		for (auto DamagedActor : OverlapActors)
 		{
 			UGameplayStatics::ApplyDamage(DamagedActor, ChemicalDamage, MyOwnerInstigator, this, DamageTypeClass);

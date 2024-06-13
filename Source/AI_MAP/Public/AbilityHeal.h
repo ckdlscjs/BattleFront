@@ -23,6 +23,7 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 	virtual	void HealCharacterHp(float& HealthPoint, float MaxPoint) override;
+	virtual void AbilityLevelUp() override;
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", meta = (AllowPrivateAccess = "true"))

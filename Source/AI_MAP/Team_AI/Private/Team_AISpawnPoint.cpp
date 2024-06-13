@@ -6,6 +6,7 @@
 #include "Team_AIGameMode.h"
 #include "Team_AICharacter_Recv.h"
 
+
 // Sets default values
 ATeam_AISpawnPoint::ATeam_AISpawnPoint()
 {
@@ -25,6 +26,10 @@ void ATeam_AISpawnPoint::BeginPlay()
 	GroundLocation = result.Location;
 }
 
+void ATeam_AISpawnPoint::SpawnPointDestruction()
+{
+}
+
 // Called every frame
 void ATeam_AISpawnPoint::Tick(float DeltaTime)
 {
@@ -33,11 +38,13 @@ void ATeam_AISpawnPoint::Tick(float DeltaTime)
 
 ATeam_AICharacterBase* ATeam_AISpawnPoint::SpawnActor()
 {	
-	//TODO : Random Enemy
-	//
-	auto spawnActor = GetWorld()->SpawnActor<ATeam_AICharacterBase>(EnemyClass, GetActorLocation(), { 0, 0, 0 });
+	ATeam_AICharacterBase* spawnActor = nullptr;
+	spawnActor = GetWorld()->SpawnActor<ATeam_AICharacterBase>(EnemyClass, GetActorLocation(), { 0, 0, 0 });
+	if (!spawnActor)
+		return spawnActor;
 	GroundLocation.Z += spawnActor->GetDefaultHalfHeight();
 	spawnActor->SetActorLocation(GroundLocation);
+	SpawnPointDestruction();
 	//send to packet server
 	if (!IsValid(spawnActor))
 	{
@@ -50,10 +57,13 @@ ATeam_AICharacterBase* ATeam_AISpawnPoint::SpawnActor()
 
 ATeam_AICharacter_Recv* ATeam_AISpawnPoint::RecvedSpawnActor()
 {
-	auto spawnActor = GetWorld()->SpawnActor<ATeam_AICharacter_Recv>(AIClassRecv, GetActorLocation(), { 0, 0, 0 });
+	ATeam_AICharacter_Recv* spawnActor = nullptr;
+	spawnActor = GetWorld()->SpawnActor<ATeam_AICharacter_Recv>(AIClassRecv, GetActorLocation(), { 0, 0, 0 });
+	if (!spawnActor)
+		return spawnActor;
 	GroundLocation.Z += spawnActor->GetDefaultHalfHeight();
 	spawnActor->SetActorLocation(GroundLocation); //NOT KNOW TO NEEDED.......................
-	
+	SpawnPointDestruction();
 	if (!IsValid(spawnActor))
 	{
 		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("NotRecvedActorSpawn")));

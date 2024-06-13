@@ -24,6 +24,7 @@ AProjectile::AProjectile()
 	ProjectileMovement->ProjectileGravityScale = 0.f;
 	ProjectileMovement->InitialSpeed = 1000.0f;
 	ProjectileMovement->MaxSpeed = 1000.0f;
+	LifeTime = 1.0f;
 }
 
 void AProjectile::PostInitializeComponents()
@@ -32,6 +33,23 @@ void AProjectile::PostInitializeComponents()
 	SphereCollision->OnComponentBeginOverlap.AddDynamic(this,&AProjectile::OnBeginOverlap);
 	//Mesh->OnComponentBeginOverlap.AddDynamic(this,&AProjectile::OnBeginOverlap);
 	//Mesh->OnComponentHit.AddDynamic(this, &AProjectile::OnHit);
+
+	GetWorld()->GetTimerManager().SetTimer
+	(
+		LifeTimeHandle,
+		[this]() -> void
+		{
+			LifeTime -= 0.1f;
+			if (LifeTime < 0.0f)
+			{
+				GetWorld()->GetTimerManager().ClearTimer(LifeTimeHandle);
+				Destroy();
+			}
+		},
+		0.1f,
+		true,
+		0.0f
+	);
 }
 
 void AProjectile::SetCollisionEnable(bool bCollide)
@@ -50,6 +68,11 @@ void AProjectile::BeginPlay()
 void AProjectile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	/*LifeTime -= DeltaTime;
+	if (LifeTime <= 0.f)
+	{
+		Destroy();
+	}*/
 }
 
 void AProjectile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

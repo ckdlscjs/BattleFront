@@ -19,7 +19,7 @@ ATeam_AIProjectileBase::ATeam_AIProjectileBase()
 	RootComponent = SphereCollision;
 	ProjectileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ProjectileMesh"));
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
-
+	LifeTime = 3.0f;
 }
 
 // Called when the game starts or when spawned
@@ -37,19 +37,19 @@ void ATeam_AIProjectileBase::OnBeginOverlap(UPrimitiveComponent* OverlappedCompo
 	auto gm = Cast<ATeam_AIGameMode>(GetWorld()->GetAuthGameMode());
 	if (gm->GetMyPlayer()->PlayerInfo->object_id() == 1)
 	{
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("ProjectileBeginOverlap!!, %f"), Damage), true, false, FColor::Green);
+		//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("ProjectileBeginOverlap!!, %f"), Damage), true, false, FColor::Green);
 		UGameplayStatics::ApplyDamage(OtherActor, Damage, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
 	}
 	Destroy();
 }
-
+/*
 void ATeam_AIProjectileBase::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("ProjectileHit!!, %f"), Damage), true, false, FColor::Green);
+	//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("ProjectileHit!!, %f"), Damage), true, false, FColor::Green);
 	UGameplayStatics::ApplyDamage(OtherActor, Damage, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
 	Destroy();
 }
-
+*/
 // Called every frame
 void ATeam_AIProjectileBase::Tick(float DeltaTime)
 {
@@ -69,6 +69,23 @@ void ATeam_AIProjectileBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 	SphereCollision->OnComponentBeginOverlap.AddDynamic(this, &ATeam_AIProjectileBase::OnBeginOverlap);
+
+	GetWorld()->GetTimerManager().SetTimer
+	(
+		LifeTimeHandle,
+		[this]() -> void
+		{
+			LifeTime -= 0.1f;
+			if (LifeTime < 0.0f)
+			{
+				GetWorld()->GetTimerManager().ClearTimer(LifeTimeHandle);
+				Destroy();
+			}
+		},
+		0.1f,
+		true,
+		0.0f
+	);
 }
 
 void ATeam_AIProjectileBase::SetCollisionEnable(bool bCollide)

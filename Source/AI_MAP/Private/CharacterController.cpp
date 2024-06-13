@@ -42,6 +42,9 @@ void ACharacterController::BeginPlay()
 	bDetachState = false;
 	CameraSpeed = 50.f;
 	bShowMouseCursor = true;
+	ShootCoolTime = 0.5f;
+	bCanShoot = true;
+	bIsPlayerDeath = false;
 }
 void ACharacterController::Tick(float DeltaTime)
 {
@@ -49,12 +52,27 @@ void ACharacterController::Tick(float DeltaTime)
 	{
 		EdgeCameraMove();
 	}
+	if (bCanShoot == false)
+	{
+		ShootCoolTime -= DeltaTime;
+		if (ShootCoolTime <= 0.f)
+		{
+			bCanShoot = true;
+			ShootCoolTime = 0.5f;
+		}
+	}
+
 	FHitResult Result;
 	GetHitResultLoc(Result);
 
 	if (GameCharacter == nullptr)
 		return;
 
+	if (IsCharaterDeath() == true)
+	{
+		return;
+	}
+		
 	FVector Forward = GameCharacter->GetActorForwardVector();
 	FVector HitLoc = Result.Location;
 	FVector ActorLoc = GameCharacter->GetActorLocation();
@@ -63,6 +81,7 @@ void ACharacterController::Tick(float DeltaTime)
 	FRotator rot = UKismetMathLibrary::FindLookAtRotation(Forward, Temp);
 	GameCharacter->SetActorRotation(rot);
 	GameCharacter->DesRot = GameCharacter->GetActorRotation();
+
 
 	//Server
 	
@@ -131,6 +150,10 @@ void ACharacterController::SetupInputComponent()
 
 void ACharacterController::Move(const FInputActionValue& Value)
 {
+	if (IsCharaterDeath() == true)
+	{
+		return;
+	}
 	bool IsFight = GameCharacter->IsFight();
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	/*UPathFollowingComponent* PFollowComp = InitNavigationControl(this);*/
@@ -213,31 +236,21 @@ void ACharacterController::CameraRotation(const FInputActionValue& Value)
 }
 void ACharacterController::CharacterAction(const FInputActionValue& Value)
 {
+	if (IsCharaterDeath() == true)
+	{
+		return;
+	}
 	bool bAttack = Value.Get<bool>();
 	if (bAttack)
 	{
 		FHitResult Res;
 		GetHitResultLoc(Res);
 		AActor* HitActor = Res.GetActor();
-		bool bIsActor = CheckActorTag(HitActor);
-		if (bIsActor == true)
+		if(bCanShoot == true)
 		{
 			GameCharacter->Fire();
-		}
-		/*else
-		{
-			FVector Dir = (Res.Location - GameCharacter->GetActorLocation()).GetSafeNormal();
-			GameCharacter->AddMovementInput(Dir, 1.0, false);
-			UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, Res.Location);
-		}*/
-		/*GameCharacter->SetFightState(true);
-		AimVector = GetHitResultLoc();
-		FVector Forward = GameCharacter->GetActorForwardVector();
-		FVector Temp = AimVector - GameCharacter->GetActorLocation();
-		Temp.Z = Forward.Z;
-		Temp.Normalize();*/
-		//Look = UKismetMathLibrary::MakeRotator(0, 0, Degree);
-		/*Look = UKismetMathLibrary::FindLookAtRotation(Forward, Temp);*/
+			bCanShoot = false;
+		}	
 	}
 }
 
@@ -355,6 +368,14 @@ void ACharacterController::GetHitResultLoc(FHitResult& Hit)
 	}
 	return;
 }
+void ACharacterController::DisableController()
+{
+	bIsPlayerDeath = true;
+}
+bool ACharacterController::IsCharaterDeath()
+{
+	return bIsPlayerDeath;
+}
 bool ACharacterController::CheckActorTag(AActor* HitActor)
 {
 	bool Check = true;
@@ -409,7 +430,7 @@ void ACharacterController::ExpUp(const FInputActionValue& Value)
 	bool fPush = Value.Get<bool>();
 	if (fPush == true)
 	{
-		GameCharacter->ExpUp(17);
+		GameCharacter->ExpUp(500);
 	}
 }
 

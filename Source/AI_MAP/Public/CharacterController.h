@@ -18,6 +18,8 @@ class AI_MAP_API ACharacterController : public APlayerController
 	GENERATED_BODY()
 public:
 	virtual void Tick(float DeltaTime) override;
+	void DisableController();
+	bool IsCharaterDeath();
 protected:
 	virtual void BeginPlay() override;
 
@@ -33,7 +35,9 @@ protected:
 	void CameraRotationReset(const FInputActionValue& Value);
 	void AbilityChoose(const FInputActionValue& Value);
 	void GetHitResultLoc(FHitResult& Hit);
+
 	bool CheckActorTag(AActor* HitActor);
+
 	/*Test Code*/
 	void LevelUp(const FInputActionValue& Value);
 	void ExpUp(const FInputActionValue& Value);
@@ -59,8 +63,12 @@ private:
 		TSubclassOf<class AProjectile> ProjectileClass;
 	UPROPERTY()
 		FVector AimVector;
-
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
+		float ShootCoolTime;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
+		bool bCanShoot;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
+		bool bIsPlayerDeath;
 	// Test Code
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 		class  UInputAction* LevelUpAction;

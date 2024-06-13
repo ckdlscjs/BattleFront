@@ -6,11 +6,13 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/SphereComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "DroneAttackRange.h"
 #include "DrawDebugHelpers.h"
 #include "AI_MAP.h"
 #include "Team_AIGameMode.h"
 #include "GameCharacter.h"
+#include "Particles/ParticleSystemComponent.h"
 
 AAbilityDrone::AAbilityDrone()
 {
@@ -22,6 +24,8 @@ AAbilityDrone::AAbilityDrone()
 	ProjectileSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Spawn Point"));
 	ProjectileSpawnPoint->SetupAttachment(RootComponent);
 	MoveComponent = CreateDefaultSubobject<UCharacterMovementComponent>(TEXT("Move Component"));
+	DroneParticleSystemComponent = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particle Component"));
+	DroneParticleSystemComponent->SetupAttachment(RootComponent);
 	Speed = 1500.f;
 	bAttack = false;
 	Damage = 5.f;
@@ -29,11 +33,13 @@ AAbilityDrone::AAbilityDrone()
 	CoolTime = 8.f;
 	Type = AbilityType::Drone;
 	State = DroneState::None;
+	
 }
 
 void AAbilityDrone::BeginPlay()
 {
 	Super::BeginPlay();
+	DroneParticleSystemComponent->bAutoActivate = false;
 }
 
 void AAbilityDrone::Tick(float DeltaTime)
@@ -44,7 +50,7 @@ void AAbilityDrone::Tick(float DeltaTime)
 	if (Cast<AGameCharacter>(GetOwner()) == Cast<ATeam_AIGameMode>(GetWorld()->GetAuthGameMode())->GetMyPlayer())
 	{
 		if (State == DroneState::Search)
-		{
+		{	
 			if (MoveToTarget())
 			{
 				Attack();
@@ -65,7 +71,7 @@ void AAbilityDrone::SetLocation(FVector& Location)
 	if (State != DroneState::Return)
 	{
 		State = DroneState::Search;
-		TargetLocation = FVector(X_Rand, Y_Rand, Location.Z);
+		TargetLocation = FVector(X_Rand, Y_Rand, StartLocation.Z);
 	}
 	else if (State == DroneState::Return)
 	{
@@ -75,7 +81,9 @@ void AAbilityDrone::SetLocation(FVector& Location)
 	
 	TargetDistance = (TargetLocation - StartLocation).Size();
 	//DrawDebugSphere(GetWorld(), TargetLocation, 200, 26, FColor(181, 0, 0), true, -1, 0, 2);
-	Direction = (TargetLocation - GetActorLocation()).GetSafeNormal();
+	Direction = (TargetLocation - StartLocation).GetSafeNormal();
+
+
 	CurrentDistance = 0.f;
 }
 
@@ -91,6 +99,7 @@ void AAbilityDrone::SetDroneStateReturn()
 
 void AAbilityDrone::ReturnDrone(FVector& Location)
 {
+
 }
 
 void AAbilityDrone::SetDroneNoneState()
@@ -98,10 +107,33 @@ void AAbilityDrone::SetDroneNoneState()
 	State = DroneState::None;
 }
 
+void AAbilityDrone::AbilityLevelUp()
+{
+	Super::AbilityLevelUp();
+	Damage += 2;
+	CoolTime -= MyAbilityLevel;
+}
+
+void AAbilityDrone::SetDroneRotation()
+{
+	FVector start = GetActorForwardVector();
+	FVector target = TargetLocation - GetActorLocation();
+	FRotator test = target.Rotation();
+	target.Z = start.Z;
+	FRotator Rot = UKismetMathLibrary::FindLookAtRotation(start, target);
+	SetActorRotation(test);
+}
+
 void AAbilityDrone::Attack()
 {
 	FVector Loc = GetActorLocation();
 	Loc.Z = 0.f;
+	if (DroneParticleSystemComponent->Template)
+	{
+		DroneParticleSystemComponent->SetWorldLocation(Loc);
+		DroneParticleSystemComponent->Activate(true);
+	}
+		
 	UGameplayStatics::ApplyRadialDamage(GetWorld(), Damage, Loc, 200.f, nullptr, TArray<AActor*>(), this, false, true);
 }
 
@@ -109,6 +141,8 @@ bool AAbilityDrone::MoveToTarget()
 {
 	if (TargetDistance > CurrentDistance)
 	{
+	
+		
 		FVector CurrentLocation = GetActorLocation();
 		CurrentLocation += Direction * Speed * MY_DeltaTime;
 		SetActorLocation(CurrentLocation);

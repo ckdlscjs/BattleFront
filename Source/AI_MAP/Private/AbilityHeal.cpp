@@ -7,7 +7,7 @@ AAbilityHeal::AAbilityHeal()
 {
 	MyAbilityLevel = 0;
 	HealAmount = 5.f;
-	CoolTime = 2.f;
+	CoolTime = 7.f;
 	Type = AbilityType::Heal;
 }
 
@@ -28,4 +28,11 @@ void AAbilityHeal::HealCharacterHp(float& HealthPoint, float MaxPoint)
 	{
 		HealthPoint = MaxPoint;
 	}
+}
+
+void AAbilityHeal::AbilityLevelUp()
+{
+	Super::AbilityLevelUp();
+	HealAmount++;
+	CoolTime--;
 }

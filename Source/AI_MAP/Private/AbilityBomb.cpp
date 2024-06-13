@@ -49,21 +49,6 @@ void AAbilityBomb::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-void AAbilityBomb::Attack(FVector& Location)
-{
-	
-		/*FVector Loc = Location;
-		double X_Max = Loc.X + 500.f;
-		double Y_Max = Loc.Y + 500.f;
-		double X_Min = Loc.X - 500.f;
-		double Y_Min = Loc.Y - 500.f;
-		float X_Rand = FMath::RandRange(X_Min, X_Max);
-		float Y_Rand = FMath::RandRange(Y_Min, Y_Max);
-		Location.X = X_Rand;
-		Location.Y = Y_Rand;
-		Location.Z = Loc.Z;*/
-		//DrawDebugSphere(GetWorld(), Location, 10, 26, FColor::Red, true, -1, 0, 2);	
-}
 
 void AAbilityBomb::SetLocation(FVector& Location)
 {
@@ -82,3 +67,16 @@ void AAbilityBomb::SetLocation(FVector& Location)
 
 	return;
 }
+
+void AAbilityBomb::AbilityLevelUp()
+{
+	Super::AbilityLevelUp();
+	Damage = (MyAbilityLevel + 5) * 2;
+	ProjectileCount++;
+}
+
+int32 AAbilityBomb::GetProjCount()
+{
+	return ProjectileCount;
+}
+

@@ -8,8 +8,8 @@ public class AI_MAP : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay", "NavigationSystem", "AIModule", "Niagara", "EnhancedInput", "UMG", "GameplayTasks", "Sockets", "Networking" });
-        PrivateDependencyModuleNames.AddRange(new string[] { "ProtobufCore" });
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay", "NavigationSystem", "AIModule", "Niagara", "EnhancedInput", "UMG", "GameplayTasks", "Sockets", "Networking", "GeometryCollectionEngine", "Paper2D" });
+        PrivateDependencyModuleNames.AddRange(new string[] { "ProtobufCore", "Paper2D" });
         PrivateIncludePaths.AddRange(new string[]
         {
 

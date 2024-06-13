@@ -77,8 +77,7 @@ void AAbilityManager::Attack()
 			if (Type == AbilityType::Range)
 			{
 				int32 Num = AbilityData.GetDefaultObject()->GetProjCount();
-				int32 Lv = AbilityData.GetDefaultObject()->GetAbilityLevel() + 1;
-				for (int i = 0; i < Num * Lv; i++)
+				for (int i = 0; i < Num; i++)
 				{
 					FRotator Rot = FRotator::ZeroRotator;
 					FVector Loc = GetActorLocation();
@@ -189,7 +188,7 @@ void AAbilityManager::SetNewAbility()
 	{
 		DroneActor = GetWorld()->SpawnActor<AAbilityBase>(SelectedAbility, DroneSpawnPoint->GetComponentLocation(), FRotator::ZeroRotator);
 		DroneActor->SetOwner(GetOwner());
-		FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::SnapToTarget, true);
+		FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepRelative, EAttachmentRule::SnapToTarget, true);
 		DroneActor->AttachToComponent(DroneSpawnPoint, Rules);
 		DroneActor->SetAttachedState(true);
 		GetWorldTimerManager().SetTimer(DroneAttackTimer, this, &AAbilityManager::DroneAttack, 3.f, true, 1);
@@ -305,7 +304,7 @@ void AAbilityManager::DroneAttack()
 		DroneActor->DetachFromActor(Rules);
 	}
 	DroneActor->SetLocation(Loc);
-
+	DroneActor->SetDroneRotation();
 	//TODO : DroneAttackPkt;
 	// need : owner_id
 
@@ -329,7 +328,7 @@ void AAbilityManager::DroneReturn()
 			GetWorldTimerManager().PauseTimer(DroneAttackTimer);
 			DroneActor->SetDroneNoneState();
 			FVector loc = GetDronePointLocation();
-			FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::SnapToTarget, true);
+			FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
 			DroneActor->AttachToComponent(DroneSpawnPoint, Rules);
 			DroneActor->SetAttachedState(true);
 			GetWorldTimerManager().UnPauseTimer(DroneAttackTimer);
@@ -388,7 +387,7 @@ void AAbilityManager::HealAbility()
 	AGameCharacter* MyOwner = Cast<AGameCharacter>(GetOwner());
 	HealComponent->HealCharacterHp(MyOwner->GetCurrentHP(), MyOwner->GetCurrentMaxHp());
 	MyOwner->UpdateHpWiget();
-
+	MyOwner->SpawnHealEffect();
 	Protocol::C_PLAYERHEAL updatedhealPkt;
 	{
 		updatedhealPkt.set_object_id(MyOwner->PlayerInfo->object_id());

@@ -19,6 +19,7 @@ public:
 	void UpdateSkillLevel(int32 index, int32 level);
 	void UpdateHpBar(int32 MaxHp, int32 CurrHp);
 	void UpdateExpBar(int32 MaxExp, int32 CurrExp);
+	void SetCharacterLevel(int32 MyLevel);
 protected:
 	virtual void NativeOnInitialized() override;
 protected:

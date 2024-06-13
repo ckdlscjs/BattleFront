@@ -17,6 +17,9 @@
 #include "Team_AICharacter_Recv.h"
 #include "Team_AIProjectileBase.h"
 #include "Team_AISpawnPointBoss.h"
+#include "Team_AISpawnPointPlayer.h"
+#include "Team_AIMapCamera.h"
+#include "Team_AIMagneticField.h"
 ATeam_AIGameMode::ATeam_AIGameMode()
 {
 	// use our custom PlayerController class
@@ -55,13 +58,19 @@ ATeam_AIGameMode::ATeam_AIGameMode()
 void ATeam_AIGameMode::StartPlay()
 {
 	Super::StartPlay();
-	bAllowTickBeforeBeginPlay = true;
+	bAllowTickBeforeBeginPlay = false;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATeam_AISpawnPointRandom::StaticClass(), SpawnPoints_Random);
 
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATeam_AIPatrolRoute::StaticClass(), PatrolRoutes);
 
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATeam_AISpawnPointBoss::StaticClass(), SpawnPoints_Boss);
 
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATeam_AISpawnPointPlayer::StaticClass(), SpawnPoints_Player);
+
+	auto pc = Cast<ACharacterController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+	pc->SetViewTarget(UGameplayStatics::GetActorOfClass(GetWorld(), ATeam_AIMapCamera::StaticClass()));
+	
+	MagneticField = Cast<ATeam_AIMagneticField>(UGameplayStatics::GetActorOfClass(GetWorld(), ATeam_AIMagneticField::StaticClass()));
 	////IncreaseGameLevel
 	//GetWorldTimerManager().SetTimer
 	//(
@@ -223,12 +232,14 @@ void ATeam_AIGameMode::SetPlayerInfo(bool isMine, const Protocol::PosInfo& Info)
 {
 	FVector location(Info.x(), Info.y(), Info.z());
 	FRotator rotation(Info.pitch(), Info.yaw(), Info.roll());
-	AGameCharacter* player = nullptr;
+	AGameCharacter* player = Cast<AGameCharacter>(GetWorld()->SpawnActor(PlayerClass, &location, &rotation));
+	/*if (!player)
+		return;*/
 	if (isMine)
 	{
 		// Case 1
 		auto PlayerController = Cast<ACharacterController>(UGameplayStatics::GetPlayerController(this, 0));
-		player = Cast<AGameCharacter>(GetWorld()->SpawnActor(PlayerClass, &location, &rotation));
+		//player = Cast<AGameCharacter>(GetWorld()->SpawnActor(PlayerClass, &location, &rotation));
 		PlayerController->Possess(player);
 		PlayerController->SetCharacter(Cast<AGameCharacter>(PlayerController->GetPawn()));
 		
@@ -239,13 +250,13 @@ void ATeam_AIGameMode::SetPlayerInfo(bool isMine, const Protocol::PosInfo& Info)
 
 		MyPlayer = player;
 	}
-	else
+	/*else
 	{
 		if(MyPlayer->PlayerInfo->object_id() != Info.object_id())
 			player = Cast<AGameCharacter>(GetWorld()->SpawnActor(PlayerClass, &location, &rotation));
 	}
 	if (!player)
-		return;
+		return;*/
 	player->SetPlayerInfo(Info);
 	Players.Add(Info.object_id(), player);
 }
@@ -398,6 +409,14 @@ void ATeam_AIGameMode::SetMoveDrone(const Protocol::S_MOVEDRONE& moveDrnPkt)
 		return;
 	FVector loc{ moveDrnPkt.x(), moveDrnPkt.y(), moveDrnPkt.z() };
 	abilityManager->RecvMoveDrone(loc);
+}
+
+void ATeam_AIGameMode::SetPlayerDespawn(uint64 objectID)
+{
+	auto FindActor = GetPlayers()[objectID];
+	if (FindActor == nullptr)
+		return;
+	GetWorld()->DestroyActor(FindActor);
 }
 
 const TMap<uint64, ATeam_AICharacterBase*>& ATeam_AIGameMode::GetEnemies() const
@@ -605,6 +624,7 @@ ATeam_AICharacterBase* ATeam_AIGameMode::GetBoss()
 {
 	return Boss;
 }
+
 
 //void ATeam_AIGameMode::Logout(AController* Exiting)
 //{

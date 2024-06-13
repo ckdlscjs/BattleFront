@@ -25,7 +25,14 @@
 #include "Kismet/GameplayStatics.h"
 #include "AI_MAP.h"
 #include "CharacterController.h"
-
+#include "HealthBar.h"
+#include "Components/WidgetComponent.h"
+#include "PaperSpriteComponent.h"
+#include "DamageTextActor.h"
+#include "Particles/ParticleSystemComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "Engine/SceneCapture2D.h"
+#include "Components/SceneCaptureComponent2D.h"
 // Sets default values
 AGameCharacter::AGameCharacter()
 {
@@ -39,17 +46,24 @@ AGameCharacter::AGameCharacter()
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	CameraComp->SetupAttachment(SpringArmComp);
 
-	/*SpawnBound = CreateDefaultSubobject<USphereComponent>(TEXT("Spawn Bound"));
-	SpawnBound->SetupAttachment(RootComponent);*/
 
 	RecognizeVisibility = CreateDefaultSubobject<USphereComponent>(TEXT("Recognize Visibility"));
 	RecognizeVisibility->SetupAttachment(RootComponent);
 
 
 	AbilitySpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("AbilitySpawnPoint"));
-	AbilitySpawnPoint->SetupAttachment(GetMesh());
-	//SpawnPoint = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Spawn Point"));
-	//SpawnPoint->SetupAttachment(SpawnBound);
+	AbilitySpawnPoint->SetupAttachment(RootComponent);
+	
+	DamageTextPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Damage Spawn Point"));
+	DamageTextPoint->SetupAttachment(RootComponent);
+
+	HealthBarWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
+	HealthBarWidget->SetupAttachment(RootComponent);
+
+	LevelUpParticleSystemComponent = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particle Component"));
+	LevelUpParticleSystemComponent->SetupAttachment(RootComponent);
+	SceneCaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent"));
+	SceneCaptureComponent->SetupAttachment(RootComponent);
 
 	MaxNum = 5;
 	CoolTimeToNormal = 15.f;
@@ -60,6 +74,13 @@ AGameCharacter::AGameCharacter()
 	DestInfo = new Protocol::PosInfo();
 	MaxGuardPoint = 0.f;
 	CurrentGuardPoint = 0.f;
+	bChangeColor = false;
+
+	PaperSprite = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("IconSprite"));
+	PaperSprite->SetupAttachment(RootComponent);
+	PaperSprite->SetRelativeLocation({ 0, 0, 2000 });
+	PaperSprite->SetRelativeRotation({ 0, 90, -90 });
+	PaperSprite->SetRelativeScale3D({ 20, 20, 20 });
 }
 
 AGameCharacter::~AGameCharacter()
@@ -74,36 +95,38 @@ AGameCharacter::~AGameCharacter()
 void AGameCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	/*APlayerController* MyController = Cast<APlayerController>(GetController());
+	if (MyController == nullptr)
+	{
+		SceneCaptureComponent->Deactivate();
+
+	}*/
+	if (HealthBarWidgetClass != nullptr)
+	{
+		HealthBarWidget->SetWidgetClass(HealthBarWidgetClass);
+		HealthBar = Cast<UHealthBar>(HealthBarWidget->GetUserWidgetObject());
+	}
+
+
 	AbilityManager = GetWorld()->SpawnActor<AAbilityManager>(AbilityManagerClass, AbilitySpawnPoint->GetComponentLocation(), FRotator::ZeroRotator);
 	if (AbilityManager->GetOwner() == nullptr)
 	{
 		AbilityManager->SetOwner(this);
-		FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::SnapToTarget, true);
+		FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepRelative, EAttachmentRule::SnapToTarget, true);
 		AbilityManager->AttachToComponent(AbilitySpawnPoint, Rules);
 	}
 	PrevCameraRotaion = SpringArmComp->GetComponentRotation();
 
-	//if (IsValid(MainHUDWidgetClass))
-	//{
-	//	MainHUD = Cast<UHUDWidget>(CreateWidget(GetWorld(), MainHUDWidgetClass));
-	//	if (IsValid(MainHUD))
-	//	{
-	//		APlayerController* MyController = Cast<APlayerController>(GetController());
-	//		MainHUD->SetOwningPlayer(MyController);
-	//		if (MyController == MainHUD->GetOwningPlayer())
-	//		{
-	//			MainHUD->AddToViewport();
-	//		}
-	//	}
-	//}
+
 
 	AttachWeapon();
 	bDead = false;
 	bFight = false;
 
 	CharacterStat.Level = 1;
+	LevelUpParticleSystemComponent->bAutoActivate = false;
 	SetNewLevel(CharacterStat.Level);
+
 }
 
 
@@ -125,9 +148,19 @@ void AGameCharacter::Tick(float DeltaTime)
 
 	///CheckExp(CharacterStat.CurrExp); // ���� �̺�Ʈ �������� �ٲٰ� �ʹ�...
 
+
 //Add Server
 	auto NetManager = GetGameInstance()->GetSubsystem<UNetworkManager>();
 	auto gm = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (bChangeColor == false)
+	{
+		if (gm->GetMyPlayer() == this)
+		{
+			HealthBar->SetColorHpBar();
+		}
+		bChangeColor = true;
+	}
+	
 	if (gm->GetMyPlayer() != this)
 	{
 		const Protocol::MoveState State = PlayerInfo->state();
@@ -157,16 +190,6 @@ void AGameCharacter::Tick(float DeltaTime)
 		}
 		bReceived = false;
 		AimYaw = DestInfo->aimyaw();
-
-
-		//test
-		//FVector loc(DestInfo->x(), DestInfo->y(), DestInfo->z());
-		//FRotator rot(0, DestInfo->yaw(), 0);
-		//speed = DestInfo->speed();
-		//SetActorRotation(rot);
-		//SetActorLocation(loc);
-		//bReceived = false;
-		//AimYaw = DestInfo->aimyaw();
 	}
 }
 
@@ -176,16 +199,52 @@ void AGameCharacter::SetVisibility(bool visible)
 	Weapon->SetVisibility(visible);
 }
 
+void AGameCharacter::CharacterMaxHpUp(float value)
+{
+	CharacterStat.MaxHP += value;
+	if (MainHUD != nullptr)
+	{
+		MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	}
+	if (HealthBar != nullptr)
+	{
+		HealthBar->SetPercentage(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	}
+}
+
+void AGameCharacter::CharacterLevelUp()
+{
+	CharacterStat.Level++;
+	SetNewLevel(CharacterStat.Level);
+}
+
+void AGameCharacter::CharacterAttackUp(float value)
+{
+	CharacterStat.Attack += value;
+}
+
+void AGameCharacter::CharacterEatItem(float value)
+{
+	CharacterStat.CurrHP += value;
+	if (CharacterStat.CurrHP > CharacterStat.MaxHP)
+	{
+		CharacterStat.CurrHP = CharacterStat.MaxHP;
+	}
+	if (MainHUD)
+		MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+}
+
 void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigateBy, AActor* DamageCauser)
 {
+
 	if (this == DamageCauser->GetOwner())
 	{
 		return;
 	}
-	//FString name = GetActorNameOrLabel();//
-	//FString da = FString::SanitizeFloat(Damage);//
-	//FString test = name +" " + da;//
-	//UKismetSystemLibrary::PrintString(GetWorld(),test
+	if (bDead == true)
+	{
+		return;
+	}
 	if (GetNetworkManager()->GameMode->GetMyPlayer()->PlayerInfo->object_id() == 1)
 	{
 		if (CurrentGuardPoint > 0.f)
@@ -200,6 +259,10 @@ void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDama
 			else
 			{
 				CurrentGuardPoint -= Damage;
+			}
+			if (HealthBar != nullptr)
+			{
+				HealthBar->SetGuardPercent(MaxGuardPoint, CurrentGuardPoint);
 			}
 		}
 		else
@@ -219,8 +282,8 @@ void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDama
 		{
 			CharacterStat.CurrHP = 0.f;
 			//Player Die Event;
-			bDead = true;
-
+			
+			DeathEvent();
 			// TODO : Dead Packet(Object_id, dead bool)
 			Protocol::C_PLAYERDEAD playerDeadPkt;
 			{
@@ -241,7 +304,11 @@ void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDama
 			MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
 			MainHUD->UpdateGuardPoint(CurrentGuardPoint, MaxGuardPoint);
 		}
-			
+		if (HealthBar != nullptr)
+		{
+			HealthBar->SetPercentage(CharacterStat.MaxHP, CharacterStat.CurrHP);
+		}
+		CreateDamageWidget(Damage);
 	}
 }
 
@@ -269,6 +336,12 @@ const void AGameCharacter::GetSpringArmLocation(FVector& Location)
 UWorld* AGameCharacter::GetMyWorld()
 {
 	return GetWorld();
+}
+
+void AGameCharacter::CreateDamageWidget(float DamageAmount)
+{
+	DamageTextActor = GetWorld()->SpawnActor<ADamageTextActor>(DamageTextClass, DamageTextPoint->GetComponentLocation(), FRotator::ZeroRotator);
+	DamageTextActor->SpawnDamageText(DamageAmount);
 }
 
 void AGameCharacter::SetSpringArmLocation(const FVector& Location)
@@ -307,6 +380,13 @@ void AGameCharacter::ResetSpringArmRotation()
 
 void AGameCharacter::SetNewLevel(int32 NewLevel)
 {
+	if (LevelUpParticleSystemComponent->Template)
+	{
+		
+		LevelUpParticleSystemComponent->SetWorldLocation(LevelUpParticleSystemComponent->GetComponentLocation());
+		LevelUpParticleSystemComponent->Activate(true);
+	}
+
 	UTeam_AIGameInstance* GameInstance = Cast<UTeam_AIGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (GameInstance == nullptr)
 	{
@@ -316,11 +396,42 @@ void AGameCharacter::SetNewLevel(int32 NewLevel)
 	{
 		return;
 	}
+	if (bDead == true)
+	{
+		return;
+	}
 	bIsLevelUp = true;
 	LevelUpCount++;
 	CharacterStat.Level = NewLevel;
-	CharacterStat.MaxHP = GameInstance->GetCharacterRowData(NewLevel)->MaxHP;
-	CharacterStat.NextExp = GameInstance->GetCharacterRowData(NewLevel)->NextExp;
+	int32 TempLevel = NewLevel - 1;
+	float HpAmount = 0.f;
+	float ExpAmount = 0.f;
+	float AttackAmount = 0.f;
+	float ArmorAmount = 0.f;
+	float SpeedAmount = 0.f;
+	float DropExpAmount = 0.f;
+	if (NewLevel > 1 )
+	{
+		HpAmount = GameInstance->GetCharacterRowData(NewLevel)->MaxHP - GameInstance->GetCharacterRowData(TempLevel)->MaxHP;
+		ExpAmount = GameInstance->GetCharacterRowData(NewLevel)->NextExp - GameInstance->GetCharacterRowData(TempLevel)->NextExp;
+		AttackAmount = GameInstance->GetCharacterRowData(NewLevel)->Attack - GameInstance->GetCharacterRowData(TempLevel)->Attack;
+		ArmorAmount = GameInstance->GetCharacterRowData(NewLevel)->Armor - GameInstance->GetCharacterRowData(TempLevel)->Armor;
+		SpeedAmount = GameInstance->GetCharacterRowData(NewLevel)->Speed - GameInstance->GetCharacterRowData(TempLevel)->Speed;
+		DropExpAmount = GameInstance->GetCharacterRowData(NewLevel)->DropExp - GameInstance->GetCharacterRowData(TempLevel)->DropExp;
+	}
+	else
+	{
+		HpAmount = GameInstance->GetCharacterRowData(NewLevel)->MaxHP;
+		ExpAmount = GameInstance->GetCharacterRowData(NewLevel)->NextExp;
+		AttackAmount = GameInstance->GetCharacterRowData(NewLevel)->Attack;
+		ArmorAmount = GameInstance->GetCharacterRowData(NewLevel)->Armor;
+		SpeedAmount = GameInstance->GetCharacterRowData(NewLevel)->Speed;
+		DropExpAmount = GameInstance->GetCharacterRowData(NewLevel)->DropExp;
+	}
+
+
+	CharacterStat.MaxHP += HpAmount;
+	CharacterStat.NextExp += ExpAmount;
 	if (NewLevel == 1)
 	{
 		CharacterStat.CurrHP = CharacterStat.MaxHP;
@@ -332,17 +443,26 @@ void AGameCharacter::SetNewLevel(int32 NewLevel)
 	else
 	{
 		CharacterStat.CurrHP = CharacterStat.CurrHP + 50;
+		if (CharacterStat.CurrHP > CharacterStat.MaxHP)
+		{
+			CharacterStat.CurrHP = CharacterStat.MaxHP;
+		}
 	}
-	CharacterStat.Attack = GameInstance->GetCharacterRowData(NewLevel)->Attack;
-	CharacterStat.Armor = GameInstance->GetCharacterRowData(NewLevel)->Armor;
-	CharacterStat.Speed = GameInstance->GetCharacterRowData(NewLevel)->Speed;
-	CharacterStat.DropExp = GameInstance->GetCharacterRowData(NewLevel)->DropExp;
+	CharacterStat.Attack += AttackAmount;
+	CharacterStat.Armor += ArmorAmount;
+	CharacterStat.Speed += SpeedAmount;
+	CharacterStat.DropExp += DropExpAmount;
 
-	//if (MainHUD)
-	//{
-	//	MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
-	//	SetRandomTextureArray();
-	//}
+	if (MainHUD)
+	{
+		MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+		SetRandomTextureArray();
+		MainHUD->SetCharacterLevel(CharacterStat.Level);
+	}
+	if (HealthBar != nullptr)
+	{
+		HealthBar->SetPercentage(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	}
 }
 
 const int32 AGameCharacter::GetCharacterLevel()
@@ -358,23 +478,16 @@ const bool AGameCharacter::IsDead()
 
 void AGameCharacter::SetAbility(int32 Index)
 {
-
+	if (bDead == true)
+	{
+		return;
+	}
 	bool bFind = AbilityManager->FindAbility(Index);
 	int32 FindLevel = 0;
 	int32 FindIndex = 0;
-	//AbilityManager->SetAbility(Index, bFind, FindIndex, FindLevel);
 	if (bFind == false)
 	{
 		AbilityManager->SetNewAbility();
-		/*if (SkillArray.Num() >= 5)
-		{
-			return;
-		}
-		AbilityMap.Add(SelectedAbility, SkillIndex);
-		FSkillData SkillData;
-		SkillData.Index = SkillIndex;
-		SkillData.Level = 0;
-		SkillArray.Add(SkillData.Index, SkillData.Level);*/
 		if (AbilityManager->GetSelectedTexture() != nullptr)
 		{
 			MainHUD->UpdateSkillImage(AbilityManager->GetSelectedTexture(), AbilityManager->GetSelectedIndex());
@@ -439,6 +552,18 @@ void AGameCharacter::UpdateHpWiget()
 	MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
 }
 
+void AGameCharacter::DeathEvent()
+{
+	ACharacterController* MyController = Cast<ACharacterController>(GetController());
+	MyController->DisableController();
+
+	//SetLifeSpan(5.0f);
+	//SetActorHiddenInGame(true);
+	//SetActorTickEnabled(false);
+	Weapon->Destroy();
+	bDead = true;
+}
+
 void AGameCharacter::SetGuardPoint(float Guard)
 {
 	MaxGuardPoint = Guard;
@@ -446,6 +571,10 @@ void AGameCharacter::SetGuardPoint(float Guard)
 	if (MainHUD)
 	{
 		MainHUD->UpdateGuardPoint(CurrentGuardPoint, MaxGuardPoint);
+	}
+	if (HealthBar != nullptr)
+	{
+		HealthBar->SetGuardPercent(MaxGuardPoint, CurrentGuardPoint);
 	}
 }
 
@@ -456,8 +585,12 @@ AWeapon* AGameCharacter::GetMyWeapon() const
 
 void AGameCharacter::ExpUp(float Exp)
 {
+	if (bDead == true)
+	{
+		return;
+	}
 	CharacterStat.CurrExp += Exp;
-	if (CharacterStat.NextExp <= CharacterStat.CurrExp)
+	while(CharacterStat.NextExp <= CharacterStat.CurrExp)
 	{
 		CharacterStat.Level++;
 		CharacterStat.CurrExp -= CharacterStat.NextExp;
@@ -468,6 +601,7 @@ void AGameCharacter::ExpUp(float Exp)
 
 bool AGameCharacter::FindAbility(int32 Index)
 {
+	
 	if (Index >= RandomTexture.Num())
 	{
 		return false;
@@ -515,11 +649,20 @@ float AGameCharacter::GetCurrentMaxHp()
 	return CharacterStat.MaxHP;
 }
 
+
 void AGameCharacter::SetRandomTextureArray()
 {
 	MainHUD->ShowChooseSkill();
 	AbilityManager->SetRandomIndex();
 	MainHUD->SetChooseSkillImage(AbilityManager->GetRandTextureArray());
+}
+
+void AGameCharacter::SpawnHealEffect()
+{
+	if (HealParticles)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), HealParticles, GetActorLocation(), GetActorRotation());
+	}
 }
 
 bool AGameCharacter::IsMyPlayer()
@@ -577,9 +720,18 @@ UNetworkManager* AGameCharacter::GetNetworkManager() const
 
 void AGameCharacter::UpdateHP(float hp)
 {
+	float CurrHp = CharacterStat.CurrHP;
 	CharacterStat.CurrHP = hp;
-	if(MainHUD)
+	float Damage = CurrHp - CharacterStat.CurrHP;
+	if (MainHUD)
+	{
 		MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	}
+	if (HealthBar != nullptr)
+	{
+		HealthBar->SetPercentage(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	}
+	CreateDamageWidget(Damage);
 }
 
 void AGameCharacter::SetDead(bool dead)
@@ -612,6 +764,7 @@ void AGameCharacter::PossessedBy(AController* NewController)
 			}
 		}
 	}
+
 	//bDead = false;
 	//bFight = false;
 

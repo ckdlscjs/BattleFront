@@ -27,8 +27,9 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	
-	virtual void Attack(FVector& Location) override;
 	virtual void SetLocation(FVector& Location)override;
+	virtual void AbilityLevelUp() override;
+	virtual int32 GetProjCount() override;
 private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))

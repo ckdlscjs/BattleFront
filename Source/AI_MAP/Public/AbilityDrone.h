@@ -27,10 +27,16 @@ public:
 	virtual void SetDroneStateReturn()override;
 	virtual void ReturnDrone(FVector& Location)override;
 	virtual void SetDroneNoneState()override;
+	virtual void AbilityLevelUp() override;
+	virtual void SetDroneRotation() override;
 	void Attack();
 	bool MoveToTarget();
 	void ChangeAttackStatus(bool bChange);
 	bool GetAttackState();
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UParticleSystemComponent* DroneParticleSystemComponent;
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		USceneComponent* ProjectileSpawnPoint;

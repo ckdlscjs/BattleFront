@@ -47,8 +47,8 @@ public:
 	virtual void Attack(FVector& Location) { return; };// �� ����
 	virtual void Attack() { return; };// �� ����
 	virtual bool CheckTime(float DTimer);
-	virtual int32 GetProjCount();
-	AbilityType GetType();
+	virtual int32 GetProjCount() { return 0; };
+	virtual AbilityType GetType();
 	virtual class UTexture2D* GetTexture();
 	virtual void SetAbilityLevel(int32 Level);
 	virtual int32 GetAbilityLevel();
@@ -62,10 +62,11 @@ public:
 	virtual bool GetAttachedState() { return bAttachedState; };
 	virtual bool MoveToTarget() { return false; };
 	virtual void ReturnDrone(FVector& Location) { return; };
-	virtual void SetDroneNoneState() { return; }
+	virtual void SetDroneNoneState() { return; };
 	virtual void SetAttachedState(bool bState) { bAttachedState = bState; };
 	virtual DroneState GetDroneState() { return DroneState::None; };
 	virtual void SetDroneStateReturn() { return; };
+	virtual void SetDroneRotation() { return; };
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		class UCapsuleComponent* CapsuleCompoent;

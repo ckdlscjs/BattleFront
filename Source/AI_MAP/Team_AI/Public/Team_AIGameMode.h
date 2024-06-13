@@ -60,6 +60,7 @@ public:
 	void SetSearchDrone(const Protocol::S_SEARCHDRONE& searchDrnPkt);
 	void SetMoveDrone(const Protocol::S_MOVEDRONE& moveDrnPkt);
 
+	void SetPlayerDespawn(uint64 objectID);
 	//Enemies
 	const TMap<uint64, ATeam_AICharacterBase*>& GetEnemies() const;
 	void SetAIMove(const Protocol::S_AIMOVE& AIMovePkt);
@@ -73,14 +74,18 @@ public:
 	void SetAIDespawn(uint64 objectID);
 	void SetKnocksBack(const Protocol::S_AI_KNOCKS_BACK& AIKnocksBackPkt);
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<AActor*> SpawnPoints_Player;
 	UPROPERTY(VisibleAnywhere)
 	TArray<AActor*> SpawnPoints_Random;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<AActor*> PatrolRoutes;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<AActor*> SpawnPoints_Boss;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class ATeam_AIMagneticField* MagneticField;
+
 
 	UPROPERTY(VisibleAnywhere)
 	int32 GameLevel;

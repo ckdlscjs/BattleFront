@@ -10,7 +10,7 @@
 */
 UBTDecorator_TargetInAttackRange::UBTDecorator_TargetInAttackRange()
 {
-    bNotifyTick = true;
+    bNotifyTick = false;
     NodeName = TEXT("CanAttack");
 }
 
