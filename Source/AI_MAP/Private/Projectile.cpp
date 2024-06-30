@@ -9,6 +9,7 @@
 #include "NetworkManager.h"
 #include "Team_AIGameMode.h"
 #include "Components/SphereComponent.h"
+#include "Particles/ParticleSystemComponent.h"
 
 // Sets default values
 AProjectile::AProjectile()
@@ -17,39 +18,25 @@ AProjectile::AProjectile()
 	PrimaryActorTick.bCanEverTick = true;
 	//Capsule Component...?
 	SphereCollision = CreateDefaultSubobject<USphereComponent>(TEXT("SphereCollision"));
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	RootComponent = SphereCollision;
-	Mesh->SetupAttachment(SphereCollision);
+	//Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	
+	//Mesh->SetupAttachment(SphereCollision);
+	ParticleSystemComponent = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Bullet Particle"));
+	ParticleSystemComponent->SetupAttachment(SphereCollision);
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	ProjectileMovement->ProjectileGravityScale = 0.f;
-	ProjectileMovement->InitialSpeed = 1000.0f;
-	ProjectileMovement->MaxSpeed = 1000.0f;
+	ProjectileMovement->InitialSpeed = 2500.f;
+	ProjectileMovement->MaxSpeed = 2500.f;
 	LifeTime = 1.0f;
 }
 
 void AProjectile::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
-	SphereCollision->OnComponentBeginOverlap.AddDynamic(this,&AProjectile::OnBeginOverlap);
+	SphereCollision->OnComponentBeginOverlap.AddDynamic(this, &AProjectile::OnBeginOverlap);
 	//Mesh->OnComponentBeginOverlap.AddDynamic(this,&AProjectile::OnBeginOverlap);
 	//Mesh->OnComponentHit.AddDynamic(this, &AProjectile::OnHit);
-
-	GetWorld()->GetTimerManager().SetTimer
-	(
-		LifeTimeHandle,
-		[this]() -> void
-		{
-			LifeTime -= 0.1f;
-			if (LifeTime < 0.0f)
-			{
-				GetWorld()->GetTimerManager().ClearTimer(LifeTimeHandle);
-				Destroy();
-			}
-		},
-		0.1f,
-		true,
-		0.0f
-	);
 }
 
 void AProjectile::SetCollisionEnable(bool bCollide)
@@ -57,22 +44,46 @@ void AProjectile::SetCollisionEnable(bool bCollide)
 	SphereCollision->SetCollisionEnabled(bCollide ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
 }
 
+void AProjectile::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	}
+}
+
 // Called when the game starts or when spawned
 void AProjectile::BeginPlay()
 {
 	Super::BeginPlay();
 	SetCollisionEnable(false);
+	/*GetWorld()->GetTimerManager().SetTimer
+	(
+		LifeTimeHandle,
+		[this]() -> void
+		{
+			if (!IsValid(this))
+				return;
+			LifeTime -= 0.1f;
+			if (LifeTime < 0.0f)
+				Destroy();
+		},
+		0.1f,
+		true,
+		0.0f
+	);*/
 }
 
 // Called every frame
 void AProjectile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	/*LifeTime -= DeltaTime;
+	LifeTime -= DeltaTime;
 	if (LifeTime <= 0.f)
 	{
 		Destroy();
-	}*/
+	}
 }
 
 void AProjectile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -95,7 +106,8 @@ void AProjectile::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActo
 		auto DamageTypeClass = UDamageType::StaticClass();
 		if (OtherActor != nullptr && OtherActor != this && OtherActor != MyOwner)
 		{
-			UGameplayStatics::ApplyDamage(OtherActor, BulletDamage, MyOwnerInstigator, this, DamageTypeClass);
+			//UGameplayStatics::ApplyDamage(OtherActor, BulletDamage, MyOwnerInstigator, Player, DamageTypeClass);
+			UGameplayStatics::ApplyDamage(OtherActor, BulletDamage, nullptr, Player, DamageTypeClass);
 			//AGameCharacter* HitPlayer = Cast<AGameCharacter>(OtherActor);
 			//if (IsValid(HitPlayer) == false)
 			//{
@@ -138,7 +150,8 @@ void AProjectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, U
 		auto DamageTypeClass = UDamageType::StaticClass();
 		if (OtherActor != nullptr && OtherActor != this && OtherActor != MyOwner)
 		{
-			UGameplayStatics::ApplyDamage(OtherActor, BulletDamage, MyOwnerInstigator, this, DamageTypeClass);
+			//UGameplayStatics::ApplyDamage(OtherActor, BulletDamage, MyOwnerInstigator, this, DamageTypeClass);
+			UGameplayStatics::ApplyDamage(OtherActor, BulletDamage, nullptr, this, DamageTypeClass);
 			AGameCharacter* HitPlayer = Cast<AGameCharacter>(OtherActor);
 			if (IsValid(HitPlayer) == false)
 			{

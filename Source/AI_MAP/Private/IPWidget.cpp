@@ -5,6 +5,7 @@
 #include "Components/EditableTextBox.h"
 #include "Components/CheckBox.h"
 #include "Components/Button.h"
+#include "NetworkManager.h"
 
 void UIPWidget::NativeConstruct()
 {
@@ -27,9 +28,13 @@ void UIPWidget::InputButtonClick()
 	{
 		FText MyText = IP_Text->GetText();
 		if (MyText.IsEmpty())
-		{
 			return;
-		}
+		//GetNetworkManager()->ConnectToGameServer(MyText.ToString());
+	}
+	else // Host
+	{
+		//FString findMyIP = GetNetworkManager()->GetLocalIPAddress();
+		//GetNetworkManager()->ConnectToGameServer(findMyIP);
 	}
 }
 
@@ -57,4 +62,9 @@ void UIPWidget::ClientCheckBoxClicked(bool bIsCheck)
 		IP_Text->SetIsEnabled(false);
 		bIsHost = false;
 	}
+}
+
+UNetworkManager* UIPWidget::GetNetworkManager() const
+{
+	return GetGameInstance()->GetSubsystem<UNetworkManager>();
 }

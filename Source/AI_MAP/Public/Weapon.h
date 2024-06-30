@@ -27,14 +27,19 @@ public:
 	UFUNCTION()
 	virtual void SetDamage(float Damage);
 	virtual void Shot();
-	FVector GetSpawnPointLocation();
-	FVector GetSpawnPointForwardVec();
+
 	UFUNCTION(BlueprintCallable)
 	void SetVisibility(bool visible);
+
+	virtual void SetDepthStencil();
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = true))
 		UStaticMeshComponent* StaticMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = true))
+		USceneComponent* EffectSpawnPoint;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UParticleSystemComponent* BulletParticleSystemComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Value", meta = (AllowPrivateAccess = true))
 		float WeaponDamage;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Socket", meta = (AllowPrivateAccess = true))

@@ -17,6 +17,7 @@ public:
 	virtual void PostInitializeComponents() override;
 	UFUNCTION(BlueprintCallable)
 	void SetCollisionEnable(bool bCollide);
+	virtual void BeginDestroy() override;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -31,6 +32,8 @@ private:
 		UStaticMeshComponent* Mesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		class UProjectileMovementComponent* ProjectileMovement;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite , meta = (AllowPrivateAccess = "true"))
+		class UParticleSystemComponent* ParticleSystemComponent;
 	UPROPERTY(EditAnywhere)
 		float BulletDamage = 0.f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))

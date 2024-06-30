@@ -8,6 +8,9 @@
 #include "DrawDebugHelpers.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "GameCharacter.h"
+#include "Protocol.pb.h"
+#include "NetworkManager.h"
 
 AAbilityBomb::AAbilityBomb()
 {
@@ -30,6 +33,7 @@ void AAbilityBomb::BeginPlay()
 {
 	Super::BeginPlay();
 	CapsuleCompoent->OnComponentBeginOverlap.AddDynamic(this, &AAbilityBomb::ProjectileBeginOverlap);
+	CapsuleCompoent->SetGenerateOverlapEvents(true);
 }
 
 void AAbilityBomb::ProjectileBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -40,7 +44,12 @@ void AAbilityBomb::ProjectileBeginOverlap(UPrimitiveComponent* HitComp, AActor* 
 	{
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), HitParticles, Loc, GetActorRotation());
 	}
-	UGameplayStatics::ApplyRadialDamage(GetWorld(), Damage, Loc, 200.f, nullptr, TArray<AActor*>(), this, false, true);
+	if (BombSound)
+	{
+		PlaySound(BombSound);
+	}
+	AGameCharacter* MyOwner = Cast<AGameCharacter>(GetOwner());
+	UGameplayStatics::ApplyRadialDamage(GetWorld(), Damage, Loc, 200.f, nullptr, TArray<AActor*>(), MyOwner, false, true);
 	Destroy();
 }
 
@@ -50,7 +59,7 @@ void AAbilityBomb::Tick(float DeltaTime)
 }
 
 
-void AAbilityBomb::SetLocation(FVector& Location)
+void AAbilityBomb::SetLocation(FVector& Location, int abilityIdx)
 {
 	//FVector Loc = FVector::ZeroVector;
 	float X_Max = Location.X + 500.f;
@@ -63,9 +72,19 @@ void AAbilityBomb::SetLocation(FVector& Location)
 	Location.Y = Y_Rand;
 	Location.Z += 1000.f;
 	SetActorLocation(Location);
-	CapsuleCompoent->SetGenerateOverlapEvents(true);
+	//CapsuleCompoent->SetGenerateOverlapEvents(true);
 
-	return;
+	Protocol::C_PLAYERSKILL_BOMB bombPkt;
+	{
+		auto player = Cast<AGameCharacter>(GetOwner());
+		bombPkt.set_object_id(player->PlayerInfo->object_id());
+		bombPkt.set_abilityarrayidx(abilityIdx);
+		bombPkt.set_x(Location.X);
+		bombPkt.set_y(Location.Y);
+		bombPkt.set_z(Location.Z);
+		bombPkt.set_dmg(this->GetAbilityDetail());
+	}
+	GetNetworkManager()->SendPacket(bombPkt);
 }
 
 void AAbilityBomb::AbilityLevelUp()
@@ -78,5 +97,25 @@ void AAbilityBomb::AbilityLevelUp()
 int32 AAbilityBomb::GetProjCount()
 {
 	return ProjectileCount;
+}
+
+float AAbilityBomb::GetAbilityDetail()
+{
+	return Damage;
+}
+
+void AAbilityBomb::SetAbilityDetail(float Details)
+{
+	Damage = Details;
+}
+
+void AAbilityBomb::PlaySound(USoundBase* Sound)
+{
+	FVector Loc = GetActorLocation();
+	Loc.Z = 0.f;
+	if (Sound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, Sound, Loc);
+	}
 }
 

@@ -3,10 +3,14 @@
 
 #include "AbilityManager.h"
 #include "AbilityBase.h"
-#include "AbilityBomb.h"
+#include "AbilityGranade.h"
+#include "AbilityDrone.h"
+#include "AbilityChemical.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Components/SphereComponent.h"
 #include "GameCharacter.h"
+#include "Particles/ParticleSystemComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Team_AIGameMode.h"
 
 // ToDo : SelectedAbility ������ �� �����
@@ -20,16 +24,26 @@ AAbilityManager::AAbilityManager()
 	RootComponent = SphereComp;
 	DroneSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Spawn Point"));
 	DroneSpawnPoint->SetupAttachment(RootComponent);
+	GuardParticle = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particle Component"));
+	GuardParticle->SetupAttachment(RootComponent);
 	SphereComp->SetGenerateOverlapEvents(true);
 	bCheckDistance = false;
+}
+
+void AAbilityManager::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	}
 }
 
 // Called when the game starts or when spawned
 void AAbilityManager::BeginPlay()
 {
 	Super::BeginPlay();
-	//GetWorldTimerManager().SetTimer(Timer, this, &ATeam_AIGameMode::SpawnEnemyRandom, Duration_SpawnEnemyRandom, true);
-
+	GuardParticle->bAutoActivate = false;
 
 }
 
@@ -83,22 +97,8 @@ void AAbilityManager::Attack()
 					FVector Loc = GetActorLocation();
 					AAbilityBase* AttackObject = GetWorld()->SpawnActor<AAbilityBase>(AbilityData, Loc, FRotator::ZeroRotator);
 					AttackObject->SetOwner(GetOwner());
-					AttackObject->SetLocation(Loc);
-
-					Protocol::C_PLAYERSKILL_RANGE rangePkt;
-					{
-						auto owner = GetOwner();
-						auto player = Cast<AGameCharacter>(owner);
-						rangePkt.set_object_id(player->PlayerInfo->object_id());
-						rangePkt.set_abilityarrayidx(idx);
-						FVector loc = AttackObject->GetActorLocation();
-						rangePkt.set_x(loc.X);
-						rangePkt.set_y(loc.Y);
-						rangePkt.set_z(loc.Z);
-						GetNetworkManager()->SendPacket(rangePkt);
-					}
+					AttackObject->SetLocation(Loc, idx);
 				}
-
 			}
 			else if (Type == AbilityType::Guard)
 			{
@@ -106,7 +106,16 @@ void AAbilityManager::Attack()
 				AGameCharacter* MyOwner = Cast<AGameCharacter>(GetOwner());
 				float GuardPoint = AbilityData.GetDefaultObject()->GetAbilityDetail();
 				MyOwner->SetGuardPoint(GuardPoint);
+				if (GuardSound)
+				{
+					UGameplayStatics::PlaySoundAtLocation(this, GuardSound, GetActorLocation());
+				}
+				if (GuardParticle->Template)
+				{
 
+					GuardParticle->SetWorldLocation(GuardParticle->GetComponentLocation());
+					GuardParticle->Activate(true);
+				}
 				Protocol::C_PLAYERSKILL_GUARD guardPkt;
 				{
 					guardPkt.set_object_id(MyOwner->PlayerInfo->object_id());
@@ -175,7 +184,7 @@ void AAbilityManager::SetNewAbility()
 	}
 	AbilityClassArray.Add(SelectedAbility);
 
-	int i;
+	int i; 
 	for (i = 0; i < DefaultAbilityArray.Num(); i++)
 	{
 		if (SelectedAbility == DefaultAbilityArray[i])
@@ -188,6 +197,11 @@ void AAbilityManager::SetNewAbility()
 	{
 		DroneActor = GetWorld()->SpawnActor<AAbilityBase>(SelectedAbility, DroneSpawnPoint->GetComponentLocation(), FRotator::ZeroRotator);
 		DroneActor->SetOwner(GetOwner());
+		DroneActor->SetDepthStencil();
+		if (DroneSpawnSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, DroneSpawnSound, GetActorLocation());
+		}
 		FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepRelative, EAttachmentRule::SnapToTarget, true);
 		DroneActor->AttachToComponent(DroneSpawnPoint, Rules);
 		DroneActor->SetAttachedState(true);
@@ -221,12 +235,6 @@ void AAbilityManager::SetNewAbility()
 			GetNetworkManager()->SendPacket(healPkt);
 		}
 	}
-	else if (Type == AbilityType::Guard)
-	{
-		AGameCharacter* MyOwner = Cast<AGameCharacter>(GetOwner());
-		float GuardPoint = SelectedAbility.GetDefaultObject()->GetAbilityDetail();
-		MyOwner->SetGuardPoint(GuardPoint);
-	}
 }
 
 void AAbilityManager::AbilityLevelUp(int32& Index, int32& Level)
@@ -236,16 +244,12 @@ void AAbilityManager::AbilityLevelUp(int32& Index, int32& Level)
 		Index = AbilityClassArray.Find(SelectedAbility);
 		SelectedAbility.GetDefaultObject()->AbilityLevelUp();
 		Level = SelectedAbility.GetDefaultObject()->GetAbilityLevel();
-		FString Name = SelectedAbility.GetDefaultObject()->GetAbilityName();
-		for (auto Base : AbilityArray)
+		if (SelectedAbility.GetDefaultObject()->GetType() == AbilityType::Guard)
 		{
-			if (Base.Key->GetAbilityName() == Name)
-			{
-				Base.Value++;
-				break;
-			}
+			AGameCharacter* player = Cast<AGameCharacter>(GetOwner());
+			player->UpdateGuradUI(SelectedAbility.GetDefaultObject()->GetAbilityDetail());
 		}
-	}
+	} 
 }
 
 bool AAbilityManager::FindAbility(int32 Index)
@@ -310,11 +314,15 @@ void AAbilityManager::DroneAttack()
 
 	Protocol::C_SEARCHDRONE searchDronePkt;
 	{
+		FRotator rot = DroneActor->GetActorRotation();
 		auto player = Cast<AGameCharacter>(GetOwner());
 		searchDronePkt.set_object_id(player->PlayerInfo->object_id());
 		searchDronePkt.set_x(Loc.X);
 		searchDronePkt.set_y(Loc.Y);
 		searchDronePkt.set_z(Loc.Z);
+		searchDronePkt.set_yaw(rot.Yaw);
+		searchDronePkt.set_pitch(rot.Pitch);
+		searchDronePkt.set_roll(rot.Roll);
 	}
 	GetNetworkManager()->SendPacket(searchDronePkt);
 }
@@ -377,6 +385,13 @@ void AAbilityManager::ResetSelectedAbility()
 	SelectedAbility = nullptr;
 }
 
+void AAbilityManager::SetCharacterGuard()
+{
+	AGameCharacter* MyOwner = Cast<AGameCharacter>(GetOwner());
+	float GuardPoint = SelectedAbility.GetDefaultObject()->GetAbilityDetail();
+	MyOwner->SetGuardPoint(GuardPoint);
+}
+
 FVector AAbilityManager::GetDronePointLocation()
 {
 	return DroneSpawnPoint->GetComponentLocation();
@@ -394,6 +409,26 @@ void AAbilityManager::HealAbility()
 		updatedhealPkt.set_updeatedhp(MyOwner->GetCurrentHP());
 
 		GetNetworkManager()->SendPacket(updatedhealPkt);
+	}
+}
+
+void AAbilityManager::StopAbility()
+{
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	}
+	if (DroneActor != nullptr)
+	{
+		DroneActor->Destroy();
+	}
+}
+
+void AAbilityManager::SetVisibility(bool visible)
+{
+	if (DroneActor != nullptr)
+	{
+		DroneActor->SetVisibility(visible);
 	}
 }
 
@@ -420,12 +455,31 @@ UNetworkManager* AAbilityManager::GetNetworkManager() const
 	return GetGameInstance()->GetSubsystem<UNetworkManager>();
 }
 
-void AAbilityManager::RecvMakeRange(AGameCharacter* owner, int abilityIdx, FVector loc)
+void AAbilityManager::RecvMakeBomb(AGameCharacter* owner, int abilityIdx, FVector loc, float dmg)
 {
 	FRotator Rot = FRotator::ZeroRotator;
-	auto temp = DefaultAbilityArray[abilityIdx];
 	AAbilityBase* AttackObject = GetWorld()->SpawnActor<AAbilityBase>(DefaultAbilityArray[abilityIdx], loc, FRotator::ZeroRotator);
 	AttackObject->SetOwner(owner);
+	AttackObject->SetAbilityDetail(dmg);
+}
+
+void AAbilityManager::RecvMakeChemical(AGameCharacter* owner, int abilityIdx, FVector loc, float dmg)
+{
+	FRotator Rot = FRotator::ZeroRotator;
+	AAbilityBase* AttackObject = GetWorld()->SpawnActor<AAbilityBase>(DefaultAbilityArray[abilityIdx], loc, FRotator::ZeroRotator);
+	AttackObject->SetOwner(owner);
+	AttackObject->SetAbilityDetail(dmg);
+	Cast<AAbilityChemical>(AttackObject)->PlayChemicalSound();
+}
+
+void AAbilityManager::RecvMakeGranade(AGameCharacter* owner, int abilityIdx, FVector loc, FVector rand, float dmg)
+{
+	FRotator Rot = FRotator::ZeroRotator;
+	AAbilityBase* AttackObject = GetWorld()->SpawnActor<AAbilityBase>(DefaultAbilityArray[abilityIdx], loc, FRotator::ZeroRotator);
+
+	AttackObject->SetOwner(owner);
+	Cast<AAbilityGranade>(AttackObject)->SetForce(rand);
+	AttackObject->SetAbilityDetail(dmg);
 }
 
 void AAbilityManager::RecvMakeHeal(int abilityIdx)
@@ -451,9 +505,13 @@ void AAbilityManager::RecvMakeDrone(int64 idx, AGameCharacter* owner)
 	FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::SnapToTarget, true);
 	DroneActor->AttachToComponent(DroneSpawnPoint, Rules);
 	DroneActor->SetAttachedState(true);
+	if (DroneSpawnSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, DroneSpawnSound, GetActorLocation());
+	}
 }
 
-void AAbilityManager::RecvSearchDrone(FVector loc)
+void AAbilityManager::RecvSearchDrone(FVector loc, FRotator rot)
 {
 	if (DroneActor->GetAttachedState())
 	{
@@ -462,9 +520,29 @@ void AAbilityManager::RecvSearchDrone(FVector loc)
 		DroneActor->DetachFromActor(Rules);
 	}
 	DroneActor->SetLocation(loc);
+	DroneActor->SetActorRotation(rot);
+	Cast<AAbilityDrone>(DroneActor)->PlayDroneMoveSound();
 }
 
 void AAbilityManager::RecvMoveDrone(FVector loc)
 {
 	DroneActor->SetActorLocation(loc);
+}
+
+void AAbilityManager::RecvReturnDrone()
+{
+	//FVector loc = GetDronePointLocation();
+	FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::SnapToTarget, true);
+	DroneActor->AttachToComponent(DroneSpawnPoint, Rules);
+	DroneActor->SetAttachedState(true);
+}
+
+void AAbilityManager::RecvAttackDrone()
+{
+	if (DroneActor)
+	{
+		Cast<AAbilityDrone>(DroneActor)->ActivateAttakPaticle();
+		Cast<AAbilityDrone>(DroneActor)->PlayDroneAttackSound();
+	}
+
 }

@@ -11,15 +11,41 @@ message C_LOGIN
 
 message S_LOGIN
 {
+	uint64 client_ID = 1;
+}
+
+message C_PLAYERSPAWNPOINT
+{
+	uint64 SpawnPointSize = 1;
+}
+
+message S_PLAYERCOUNT
+{
+	uint64 playerCount = 1;
+}
+
+message C_PLAYERCOUNT
+{
+}
+
+message C_GAMESTART
+{
+
+}
+message S_GAMESTART
+{
+
 }
 
 message C_ENTER_GAME
 {
+	uint64 client_ID = 1;
 }
 
 message S_ENTER_GAME
 {
 	ObjectInfo player = 1;
+	uint64 spawnIdx = 2;
 }
 
 message C_LEAVE_GAME
@@ -35,6 +61,7 @@ message S_LEAVE_GAME
 message S_SPAWN
 {
 	repeated ObjectInfo players = 1;
+	uint64 spawnIdx = 2;
 }
 
 message S_DESPAWN
@@ -87,6 +114,32 @@ message S_HIT
 	float damage = 3;
 }
 
+message S_EXPUP
+{
+	uint64 ownerId = 1;
+	float exp = 2;
+}
+
+message C_EXPUP
+{
+	uint64 ownerId = 1;
+	float exp = 2;
+}
+
+message S_LVUP
+{
+	uint64 ownerId = 1;
+	float currExp = 2;
+	int64 level = 3;
+}
+
+message C_LVUP
+{
+	uint64 ownerId = 1;
+	float currExp = 2;
+	int64 level = 3;
+}
+
 message C_AISPAWN_RANDOM
 {
 	uint64 object_id = 1;
@@ -103,12 +156,14 @@ message C_AISPAWN_PATROL
 {
 	uint64 object_id = 1;
 	uint64 container_Idx = 2;
+	uint64 pointIdx = 3;
 }
 
 message S_AISPAWN_PATROL
 {
 	uint64 object_id = 1;
 	uint64 container_Idx = 2;
+	uint64 pointIdx = 3;
 }
 
 message C_AISPAWN_BOSS
@@ -157,6 +212,18 @@ message C_AIATTACK
 	uint64 attack_idx = 2;
 }
 
+message S_AIATTACK_BOSS2
+{
+	uint64 object_id = 1;
+	repeated uint64 target_id = 2;
+}
+
+message C_AIATTACK_BOSS2
+{
+	uint64 object_id = 1;
+	repeated uint64 target_id = 2;
+}
+
 message S_AIROTATE
 {
 	uint64 object_id = 1;
@@ -193,12 +260,14 @@ message S_DAMAGED
 {
 	uint64 object_id = 1;
 	float hp = 2;
+	float guardPoint = 3;
 }
 
 message C_DAMAGED
 {
 	uint64 object_id = 1;
 	float hp = 2;
+	float guardPoint = 3;
 }
 
 message S_AIDAMAGED
@@ -217,12 +286,16 @@ message S_AIDEAD
 {
 	uint64 object_id = 1;
 	bool dead = 2;
+	uint64 owner_object_id = 3;
+	float exp = 4;
 }
 
 message C_AIDEAD
 {
 	uint64 object_id = 1;
 	bool dead = 2;
+	uint64 owner_object_id = 3;
+	float exp = 4;
 }
 
 message S_PLAYERDEAD
@@ -283,22 +356,70 @@ message C_AI_KNOCKS_BACK
 	float vz = 5;
 }
 
-message S_PLAYERSKILL_RANGE
+message S_PLAYERSKILL_BOMB
 {
 	uint64 object_id = 1;
 	uint64 abilityArrayIdx = 2;
 	float x = 3;
 	float y = 4;
 	float z = 5;
+	float dmg = 6;
 }
 
-message C_PLAYERSKILL_RANGE
+message C_PLAYERSKILL_BOMB
 {
 	uint64 object_id = 1;
 	uint64 abilityArrayIdx = 2;
 	float x = 3;
 	float y = 4;
 	float z = 5;
+	float dmg = 6;
+}
+
+message S_PLAYERSKILL_GRANADE
+{
+	uint64 object_id = 1;
+	uint64 abilityArrayIdx = 2;
+	float x = 3;
+	float y = 4;
+	float z = 5;
+	float rx = 6;
+	float ry = 7;
+	float rz = 8;
+	float dmg = 9;
+}
+
+message C_PLAYERSKILL_GRANADE
+{
+	uint64 object_id = 1;
+	uint64 abilityArrayIdx = 2;
+	float x = 3;
+	float y = 4;
+	float z = 5;
+	float rx = 6;
+	float ry = 7;
+	float rz = 8;
+	float dmg = 9;
+}
+
+message S_PLAYERSKILL_CHEMICAL
+{
+	uint64 object_id = 1;
+	uint64 abilityArrayIdx = 2;
+	float x = 3;
+	float y = 4;
+	float z = 5;
+	float dmg = 6;
+}
+
+message C_PLAYERSKILL_CHEMICAL
+{
+	uint64 object_id = 1;
+	uint64 abilityArrayIdx = 2;
+	float x = 3;
+	float y = 4;
+	float z = 5;
+	float dmg = 6;
 }
 
 message S_PLAYERSKILL_GUARD
@@ -371,6 +492,9 @@ message S_SEARCHDRONE
 	float x = 2;
 	float y = 3;
 	float z = 4;
+	float yaw = 5;
+	float pitch = 6;
+	float roll = 7;
 }
 
 message C_SEARCHDRONE
@@ -379,6 +503,9 @@ message C_SEARCHDRONE
 	float x = 2;
 	float y = 3;
 	float z = 4;
+	float yaw = 5;
+	float pitch = 6;
+	float roll = 7;
 }
 
 message S_RETURNDRONE
@@ -387,6 +514,104 @@ message S_RETURNDRONE
 }
 
 message C_RETURNDRONE
+{
+	uint64 object_id = 1;
+}
+
+message S_ATTACKDRONE
+{
+	uint64 object_id = 1;
+}
+
+message C_ATTACKDRONE
+{
+	uint64 object_id = 1;
+}
+
+message S_EATITEM_MAXHPUP
+{
+	uint64 object_id = 1;
+	float maxHP = 2;
+}
+
+message C_EATITEM_MAXHPUP
+{
+	uint64 object_id = 1;
+	float maxHP = 2;
+}
+
+message S_EATITEM_LVUP
+{
+	uint64 object_id = 1;
+	int64 curLV = 2;
+}
+
+message C_EATITEM_LVUP
+{
+	uint64 object_id = 1;
+	int64 curLV = 2;
+}
+
+message S_EATITEM_DMGUP
+{
+	uint64 object_id = 1;
+	float attackDmg = 2;
+}
+
+message C_EATITEM_DMGUP
+{
+	uint64 object_id = 1;
+	float attackDmg = 2;
+}
+
+message S_EATITEM_HEALHP
+{
+	uint64 object_id = 1;
+	float curHP = 2;
+}
+
+message C_EATITEM_HEALHP
+{
+	uint64 object_id = 1;
+	float curHP = 2;
+}
+
+message S_SET_MAGNETICFIELD
+{
+	float r = 1;
+	float g = 2;
+	float b = 3;
+	float a = 4;
+	float radius = 5;
+	float time = 6;
+}
+
+message C_SET_MAGNETICFIELD
+{
+	float r = 1;
+	float g = 2;
+	float b = 3;
+	float a = 4;
+	float radius = 5;
+	float time = 6;
+}
+
+message S_WORLD_LVUP
+{
+	int64 worldLevel = 1;
+}
+
+message C_WORLD_LVUP
+{
+	int64 worldLevel = 1;
+}
+
+message S_GAMERESULT
+{
+	uint64 object_id = 1;
+}
+
+message C_GAMERESULT
 {
 	uint64 object_id = 1;
 }

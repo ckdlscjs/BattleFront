@@ -46,6 +46,7 @@ void ATeam_AICharacter_Boss::BeginPlay()
 	Super::BeginPlay();
 	UKismetMathLibrary::SetRandomStreamSeed(randVar, UKismetMathLibrary::RandomInteger(123456789));
 	//AttackRange = MeleeAttackCollision->GetRelativeLocation().X; //NotUse boss
+	PlayAudioSystemAtLocation(TEXT("SoundSpawn"), GetActorLocation());
 }
 
 bool ATeam_AICharacter_Boss::RecognizePlayers()
@@ -60,7 +61,7 @@ bool ATeam_AICharacter_Boss::RecognizePlayers()
 	AActor* Target = Cast<AActor>(Blackboard->GetValueAsObject(ATeam_AIController::TargetKey));
 	for (auto iter = Players.CreateIterator(); iter; ++iter)
 	{
-		if (!(*iter))
+		if (!(*iter) || Cast<AGameCharacter>(*iter)->IsDead())
 		{
 			iter.RemoveCurrent();
 			continue;
@@ -106,8 +107,9 @@ void ATeam_AICharacter_Boss::Attack4()
 	{
 		for (const auto& iter : OverlapResults)
 		{
-			UGameplayStatics::ApplyDamage(iter.GetActor(), Attack, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
-			DrawDebugSphere(GetWorld(), GetActorLocation(), Attack4Radius, 16, FColor::Blue, false, 1.0f);
+			//UGameplayStatics::ApplyDamage(iter.GetActor(), Attack, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
+			UGameplayStatics::ApplyDamage(iter.GetActor(), Attack, nullptr, this, UDamageType::StaticClass());
+			//DrawDebugSphere(GetWorld(), GetActorLocation(), Attack4Radius, 16, FColor::Blue, false, 1.0f);
 		}
 	}
 }
@@ -140,7 +142,8 @@ void ATeam_AICharacter_Boss::MeleeAttackCollisionBeginOverlap(UPrimitiveComponen
 	dir = dir * AmountKnockback;
 	auto player = Cast<ACharacter>(OtherActor);
 	Cast<ACharacter>(OtherActor)->LaunchCharacter(dir, false, false);
-	UGameplayStatics::ApplyDamage(OtherActor, Attack, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
+	//UGameplayStatics::ApplyDamage(OtherActor, Attack, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
+	UGameplayStatics::ApplyDamage(OtherActor, Attack, nullptr, this, UDamageType::StaticClass());
 
 	//TODO : 캐릭터가 밀리는 넉백 패킷
 	// boss id ,target id, dir*AmountKnockback

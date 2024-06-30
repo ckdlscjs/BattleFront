@@ -33,6 +33,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Engine/SceneCapture2D.h"
 #include "Components/SceneCaptureComponent2D.h"
+
 // Sets default values
 AGameCharacter::AGameCharacter()
 {
@@ -53,7 +54,7 @@ AGameCharacter::AGameCharacter()
 
 	AbilitySpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("AbilitySpawnPoint"));
 	AbilitySpawnPoint->SetupAttachment(RootComponent);
-	
+
 	DamageTextPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Damage Spawn Point"));
 	DamageTextPoint->SetupAttachment(RootComponent);
 
@@ -62,6 +63,7 @@ AGameCharacter::AGameCharacter()
 
 	LevelUpParticleSystemComponent = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particle Component"));
 	LevelUpParticleSystemComponent->SetupAttachment(RootComponent);
+	
 	SceneCaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent"));
 	SceneCaptureComponent->SetupAttachment(RootComponent);
 
@@ -126,6 +128,8 @@ void AGameCharacter::BeginPlay()
 	CharacterStat.Level = 1;
 	LevelUpParticleSystemComponent->bAutoActivate = false;
 	SetNewLevel(CharacterStat.Level);
+	MyGameMode = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	NetworkManager = GetGameInstance()->GetSubsystem<UNetworkManager>();
 
 }
 
@@ -150,18 +154,18 @@ void AGameCharacter::Tick(float DeltaTime)
 
 
 //Add Server
-	auto NetManager = GetGameInstance()->GetSubsystem<UNetworkManager>();
-	auto gm = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	//auto NetManager = GetGameInstance()->GetSubsystem<UNetworkManager>();
+	//auto gm = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 	if (bChangeColor == false)
 	{
-		if (gm->GetMyPlayer() == this)
+		if (MyGameMode->GetMyPlayer() == this)
 		{
 			HealthBar->SetColorHpBar();
 		}
 		bChangeColor = true;
 	}
-	
-	if (gm->GetMyPlayer() != this)
+
+	if (MyGameMode->GetMyPlayer() != this)
 	{
 		const Protocol::MoveState State = PlayerInfo->state();
 
@@ -197,10 +201,24 @@ void AGameCharacter::SetVisibility(bool visible)
 {
 	GetMesh()->SetVisibility(visible);
 	Weapon->SetVisibility(visible);
+	PaperSprite->SetVisibility(visible);
+	if (HealthBar != nullptr)
+	{
+		HealthBar->SetVisibility(visible ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+	}
+	if (AbilityManager != nullptr)
+	{
+		AbilityManager->SetVisibility(visible);
+	}
+	//Need to set visbility HealthBarWidget
 }
 
 void AGameCharacter::CharacterMaxHpUp(float value)
 {
+	auto gm = GetTeam_AIGameMode();
+	if (gm->GetMyPlayer()->PlayerInfo->object_id() != 1)
+		return;
+
 	CharacterStat.MaxHP += value;
 	if (MainHUD != nullptr)
 	{
@@ -210,21 +228,63 @@ void AGameCharacter::CharacterMaxHpUp(float value)
 	{
 		HealthBar->SetPercentage(CharacterStat.MaxHP, CharacterStat.CurrHP);
 	}
+	/*
+	if (ItemEquipSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ItemEquipSound, GetActorLocation());
+	}
+	*/
+	Protocol::C_EATITEM_MAXHPUP maxHpPkt;
+	{
+		maxHpPkt.set_object_id(this->PlayerInfo->object_id());
+		maxHpPkt.set_maxhp(CharacterStat.MaxHP);
+	}
+	GetNetworkManager()->SendPacket(maxHpPkt);
 }
 
 void AGameCharacter::CharacterLevelUp()
 {
+	auto gm = GetTeam_AIGameMode();
+	if (gm->GetMyPlayer()->PlayerInfo->object_id() != 1)
+		return;
+
 	CharacterStat.Level++;
 	SetNewLevel(CharacterStat.Level);
+
+	Protocol::C_EATITEM_LVUP lvUpPkt;
+	{
+		lvUpPkt.set_object_id(this->PlayerInfo->object_id());
+		lvUpPkt.set_curlv(CharacterStat.Level);
+	}
+	GetNetworkManager()->SendPacket(lvUpPkt);
 }
 
 void AGameCharacter::CharacterAttackUp(float value)
 {
+	auto gm = GetTeam_AIGameMode();
+	if (gm->GetMyPlayer()->PlayerInfo->object_id() != 1)
+		return;
+
 	CharacterStat.Attack += value;
+	if (ItemEquipSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ItemEquipSound, GetActorLocation());
+	}
+
+	Protocol::C_EATITEM_DMGUP dmgPkt;
+	{
+		dmgPkt.set_object_id(PlayerInfo->object_id());
+		dmgPkt.set_attackdmg(CharacterStat.Attack);
+	}
+	GetNetworkManager()->SendPacket(dmgPkt);
 }
 
 void AGameCharacter::CharacterEatItem(float value)
 {
+	auto gm = GetTeam_AIGameMode();
+	if (gm->GetMyPlayer()->PlayerInfo->object_id() != 1)
+		return;
+
 	CharacterStat.CurrHP += value;
 	if (CharacterStat.CurrHP > CharacterStat.MaxHP)
 	{
@@ -232,11 +292,38 @@ void AGameCharacter::CharacterEatItem(float value)
 	}
 	if (MainHUD)
 		MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	/*
+	if (ItemEquipSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ItemEquipSound, GetActorLocation());
+	}
+	*/
+	if (HealthBar != nullptr)
+	{
+		HealthBar->SetPercentage(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	}
+	Protocol::C_EATITEM_HEALHP healedHpPkt;
+	{
+		healedHpPkt.set_object_id(PlayerInfo->object_id());
+		healedHpPkt.set_curhp(CharacterStat.CurrHP);
+	}
+	GetNetworkManager()->SendPacket(healedHpPkt);
+}
+
+void AGameCharacter::SetPlayerColor()
+{
+	UMaterialInstanceDynamic* MaterialDynamicInst = GetMesh()->CreateDynamicMaterialInstance(0, GetMesh()->GetMaterial(0));
+	if(PlayerInfo->object_id() <= PlayerColors.Num())
+		MaterialDynamicInst->SetVectorParameterValue(TEXT("PlayerColor"), PlayerColors[PlayerInfo->object_id() - 1]);
+}
+
+UHUDWidget* AGameCharacter::GetHUDWidget()
+{
+	return MainHUD;
 }
 
 void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigateBy, AActor* DamageCauser)
 {
-
 	if (this == DamageCauser->GetOwner())
 	{
 		return;
@@ -244,6 +331,10 @@ void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDama
 	if (bDead == true)
 	{
 		return;
+	}
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation());
 	}
 	if (GetNetworkManager()->GameMode->GetMyPlayer()->PlayerInfo->object_id() == 1)
 	{
@@ -260,6 +351,7 @@ void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDama
 			{
 				CurrentGuardPoint -= Damage;
 			}
+
 			if (HealthBar != nullptr)
 			{
 				HealthBar->SetGuardPercent(MaxGuardPoint, CurrentGuardPoint);
@@ -268,21 +360,22 @@ void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDama
 		else
 		{
 			CharacterStat.CurrHP -= Damage;
-			//TODO : Damaged Packet(Object_id, Updated HP)
-			Protocol::C_DAMAGED dmgedPkt;
-			{
-				dmgedPkt.set_object_id(PlayerInfo->object_id());
-				dmgedPkt.set_hp(CharacterStat.CurrHP);
+		}
 
-				GetNetworkManager()->SendPacket(dmgedPkt);
-			}
+		Protocol::C_DAMAGED dmgedPkt;
+		{
+			dmgedPkt.set_object_id(PlayerInfo->object_id());
+			dmgedPkt.set_hp(CharacterStat.CurrHP);
+			dmgedPkt.set_guardpoint(CurrentGuardPoint);
+
+			GetNetworkManager()->SendPacket(dmgedPkt);
 		}
 
 		if (CharacterStat.CurrHP <= 0.f)
 		{
 			CharacterStat.CurrHP = 0.f;
 			//Player Die Event;
-			
+
 			DeathEvent();
 			// TODO : Dead Packet(Object_id, dead bool)
 			Protocol::C_PLAYERDEAD playerDeadPkt;
@@ -296,7 +389,9 @@ void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDama
 			if (WinnerID)
 			{
 				// TODO : What object to send?
-
+				Protocol::C_GAMERESULT resultPkt;
+				resultPkt.set_object_id(WinnerID);
+				GetNetworkManager()->SendPacket(resultPkt);
 			}
 		}
 		if (MainHUD)
@@ -310,6 +405,11 @@ void AGameCharacter::TakenDamage(AActor* DamagedActor, float Damage, const UDama
 		}
 		CreateDamageWidget(Damage);
 	}
+	if (PlayerInfo->object_id() == GetNetworkManager()->GameMode->GetMyPlayer()->PlayerInfo->object_id())
+	{
+		if (MainHUD)
+			MainHUD->UpdateGuardPoint(CurrentGuardPoint, MaxGuardPoint);
+	}
 }
 
 // Called to bind functionality to input
@@ -322,6 +422,23 @@ void AGameCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 	OnTakeAnyDamage.AddDynamic(this, &AGameCharacter::TakenDamage);
+}
+void AGameCharacter::BeginDestroy()
+{
+	Super::BeginDestroy();
+	/*ACharacterController* MyController = Cast<ACharacterController>(GetController());
+	if (MyController != nullptr)
+	{
+		MyController->Destroy();
+	}*/
+	if (Weapon != nullptr)
+	{
+		Weapon->Destroy();
+	}
+	if (AbilityManager != nullptr)
+	{
+		AbilityManager->Destroy();
+	}
 }
 const void AGameCharacter::GetSpringArmRotator(FRotator& Rotator)
 {
@@ -382,7 +499,6 @@ void AGameCharacter::SetNewLevel(int32 NewLevel)
 {
 	if (LevelUpParticleSystemComponent->Template)
 	{
-		
 		LevelUpParticleSystemComponent->SetWorldLocation(LevelUpParticleSystemComponent->GetComponentLocation());
 		LevelUpParticleSystemComponent->Activate(true);
 	}
@@ -400,6 +516,10 @@ void AGameCharacter::SetNewLevel(int32 NewLevel)
 	{
 		return;
 	}
+	if (LevelUpSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, LevelUpSound, GetActorLocation());
+	}
 	bIsLevelUp = true;
 	LevelUpCount++;
 	CharacterStat.Level = NewLevel;
@@ -410,7 +530,7 @@ void AGameCharacter::SetNewLevel(int32 NewLevel)
 	float ArmorAmount = 0.f;
 	float SpeedAmount = 0.f;
 	float DropExpAmount = 0.f;
-	if (NewLevel > 1 )
+	if (NewLevel > 1)
 	{
 		HpAmount = GameInstance->GetCharacterRowData(NewLevel)->MaxHP - GameInstance->GetCharacterRowData(TempLevel)->MaxHP;
 		ExpAmount = GameInstance->GetCharacterRowData(NewLevel)->NextExp - GameInstance->GetCharacterRowData(TempLevel)->NextExp;
@@ -462,6 +582,7 @@ void AGameCharacter::SetNewLevel(int32 NewLevel)
 	if (HealthBar != nullptr)
 	{
 		HealthBar->SetPercentage(CharacterStat.MaxHP, CharacterStat.CurrHP);
+		HealthBar->SetLevelText(CharacterStat.Level);
 	}
 }
 
@@ -515,7 +636,6 @@ void AGameCharacter::SetAbility(int32 Index)
 
 void AGameCharacter::AttachWeapon()
 {
-	//Weapon = GetWorld()->SpawnActor<AWeapon>(WeaponClass,FVector::ZeroVector, FRotator::ZeroRotator);
 	Weapon = GetWorld()->SpawnActor<AWeapon>(WeaponClass, GetActorLocation(), GetActorRotation());
 	if (Weapon != nullptr)
 	{
@@ -537,6 +657,14 @@ void AGameCharacter::SetAimYaw(float Yaw)
 	AimYaw = Yaw;
 }
 
+void AGameCharacter::PlayShotSound()
+{
+	if (ShootSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ShootSound, GetActorLocation());
+	}
+}
+
 void AGameCharacter::SetCharacterMovementRotation(bool bState)
 {
 	GetCharacterMovement()->bOrientRotationToMovement = bState;
@@ -544,23 +672,37 @@ void AGameCharacter::SetCharacterMovementRotation(bool bState)
 
 void AGameCharacter::Fire()
 {
-	Weapon->Shot();
+	if(Weapon)
+	{
+		Weapon->Shot();
+		if (ShootSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, ShootSound, GetActorLocation());
+		}
+	}
 }
 
 void AGameCharacter::UpdateHpWiget()
 {
 	MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	if (HealthBar != nullptr)
+	{
+		HealthBar->SetPercentage(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	}
 }
 
 void AGameCharacter::DeathEvent()
 {
-	ACharacterController* MyController = Cast<ACharacterController>(GetController());
-	MyController->DisableController();
-
 	//SetLifeSpan(5.0f);
-	//SetActorHiddenInGame(true);
-	//SetActorTickEnabled(false);
-	Weapon->Destroy();
+	ACharacterController* MyCon = Cast<ACharacterController>(GetController());
+	if (MyCon != nullptr)
+	{
+		MyCon->DisableController();
+	}
+	SetVisibility(false);
+	SetActorEnableCollision(false);
+	SetActorTickEnabled(false);
+	AbilityManager->StopAbility();
 	bDead = true;
 }
 
@@ -578,6 +720,21 @@ void AGameCharacter::SetGuardPoint(float Guard)
 	}
 }
 
+void AGameCharacter::UpdateGuradUI(float Max, float Cur)
+{
+	if ((Cur - 0.f) <= 0.0001)
+	{
+		HealthBar->SetGuardPercent(Max, CurrentGuardPoint);
+
+		MainHUD->UpdateGuardPoint(CurrentGuardPoint, Max);
+	}
+	else
+	{
+		HealthBar->SetGuardPercent(Max, Cur);
+		MainHUD->UpdateGuardPoint(Cur, Max);
+	}
+}
+
 AWeapon* AGameCharacter::GetMyWeapon() const
 {
 	return Weapon;
@@ -590,18 +747,33 @@ void AGameCharacter::ExpUp(float Exp)
 		return;
 	}
 	CharacterStat.CurrExp += Exp;
-	while(CharacterStat.NextExp <= CharacterStat.CurrExp)
+	Protocol::C_EXPUP expPkt;
+	{
+		expPkt.set_ownerid(PlayerInfo->object_id());
+		expPkt.set_exp(CharacterStat.CurrExp);
+	}
+	GetNetworkManager()->SendPacket(expPkt);
+
+	while (CharacterStat.NextExp <= CharacterStat.CurrExp)
 	{
 		CharacterStat.Level++;
 		CharacterStat.CurrExp -= CharacterStat.NextExp;
 		SetNewLevel(CharacterStat.Level);
+		Protocol::C_LVUP lvUpPkt;
+		{
+			lvUpPkt.set_ownerid(PlayerInfo->object_id());
+			lvUpPkt.set_currexp(CharacterStat.CurrExp);
+			lvUpPkt.set_level(CharacterStat.Level);
+		}
+		GetNetworkManager()->SendPacket(lvUpPkt);
 	}
-	MainHUD->UpdateExpBar(CharacterStat.NextExp, CharacterStat.CurrExp);
+	if (MainHUD)
+		MainHUD->UpdateExpBar(CharacterStat.NextExp, CharacterStat.CurrExp);
 }
 
 bool AGameCharacter::FindAbility(int32 Index)
 {
-	
+
 	if (Index >= RandomTexture.Num())
 	{
 		return false;
@@ -647,6 +819,11 @@ float& AGameCharacter::GetCurrentHP()
 float AGameCharacter::GetCurrentMaxHp()
 {
 	return CharacterStat.MaxHP;
+}
+
+float AGameCharacter::GetCurrentGuard()
+{
+	return CurrentGuardPoint;
 }
 
 
@@ -718,6 +895,11 @@ UNetworkManager* AGameCharacter::GetNetworkManager() const
 	return GetGameInstance()->GetSubsystem<UNetworkManager>();
 }
 
+ATeam_AIGameMode* AGameCharacter::GetTeam_AIGameMode()
+{
+	return Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+}
+
 void AGameCharacter::UpdateHP(float hp)
 {
 	float CurrHp = CharacterStat.CurrHP;
@@ -734,14 +916,17 @@ void AGameCharacter::UpdateHP(float hp)
 	CreateDamageWidget(Damage);
 }
 
+void AGameCharacter::UpdateGuard(float guard)
+{
+	CurrentGuardPoint = guard;
+
+	if (HealthBar != nullptr)
+		HealthBar->SetGuardPercent(MaxGuardPoint, CurrentGuardPoint);
+}
+
 void AGameCharacter::SetDead(bool dead)
 {
 	bDead = dead;
-}
-
-AAbilityManager* AGameCharacter::GetAbilityManger()
-{
-	return AbilityManager;
 }
 
 void AGameCharacter::PossessedBy(AController* NewController)
@@ -750,7 +935,7 @@ void AGameCharacter::PossessedBy(AController* NewController)
 
 	auto controller = Cast<ACharacterController>(NewController);
 	controller->SetCharacter(this);
-
+	controller->SetMyMouseCursor();
 	if (IsValid(MainHUDWidgetClass))
 	{
 		MainHUD = Cast<UHUDWidget>(CreateWidget(GetWorld(), MainHUDWidgetClass));
@@ -780,11 +965,86 @@ void AGameCharacter::PossessedBy(AController* NewController)
 	{
 		MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
 		SetRandomTextureArray();
-		MainHUD->UpdateGuardPoint(CurrentGuardPoint,MaxGuardPoint );
+		MainHUD->UpdateGuardPoint(CurrentGuardPoint, MaxGuardPoint);
 	}
+
+	if (MainHUD)
+	{
+		SceneCaptureComponent->TextureTarget = RenderTarget;
+		PaperSprite->SetSprite(SpritePlayer);
+	}
+	GetMesh()->SetRenderCustomDepth(false);
+	GetMesh()->CustomDepthStencilValue = 1;
+	GetMesh()->CustomDepthStencilWriteMask = ERendererStencilMask::ERSM_255;
+	GetMesh()->SetRenderCustomDepth(true);
+	Weapon->SetDepthStencil();
 }
 
 AAbilityManager* AGameCharacter::GetAbilityManager()
 {
 	return AbilityManager;
+}
+
+void AGameCharacter::RecvCharacterMaxHpUp(float value)
+{
+	CharacterStat.MaxHP = value;
+	if (MainHUD != nullptr)
+	{
+		MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	}
+	if (HealthBar != nullptr)
+	{
+		HealthBar->SetPercentage(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	}
+}
+
+void AGameCharacter::RecvCharacterLevelUp(int64 lv)
+{
+	CharacterStat.Level = lv;
+	SetNewLevel(CharacterStat.Level);
+}
+
+void AGameCharacter::RecvCharacterAttackUp(float value)
+{
+	CharacterStat.Attack = value;
+}
+
+void AGameCharacter::RecvCharacterEatItem(float value)
+{
+	CharacterStat.CurrHP = value;
+	if (CharacterStat.CurrHP > CharacterStat.MaxHP)
+	{
+		CharacterStat.CurrHP = CharacterStat.MaxHP;
+	}
+	if (MainHUD)
+		MainHUD->UpdateHpBar(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	if (HealthBar != nullptr)
+	{
+		HealthBar->SetPercentage(CharacterStat.MaxHP, CharacterStat.CurrHP);
+	}
+}
+
+void AGameCharacter::RecvExpUp(float exp)
+{
+	if (bDead == true)
+	{
+		return;
+	}
+	CharacterStat.CurrExp = exp;
+	if (MainHUD)
+		MainHUD->UpdateExpBar(CharacterStat.NextExp, CharacterStat.CurrExp);
+}
+
+void AGameCharacter::RecvLvUP(int64 level, float currHP)
+{
+	CharacterStat.Level = level;
+	CharacterStat.CurrExp = currHP;
+	SetNewLevel(CharacterStat.Level);
+
+	if (MainHUD)
+		MainHUD->UpdateExpBar(CharacterStat.NextExp, CharacterStat.CurrExp);
+	if (HealthBar)
+	{
+		HealthBar->SetLevelText(CharacterStat.Level);
+	}
 }

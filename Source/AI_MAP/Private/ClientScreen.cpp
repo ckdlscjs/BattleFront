@@ -5,6 +5,8 @@
 #include "Components/TextBlock.h"
 #include "Components/EditableTextBox.h"
 #include "Components/Button.h"
+#include "NetworkManager.h"
+
 void UClientScreen::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -21,11 +23,15 @@ void UClientScreen::ConnectButtonClick()
 {
 	FText MyText = Ip_Text->GetText();
 	if (MyText.IsEmpty())
-	{
 		return;
-	}
 	//connect logic
+	if (GetNetworkManager()->ConnectToGameServer(MyText.ToString()))
+		SuccessText->SetText(FText::FromString("success")); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
+	else
+		SuccessText->SetText(FText::FromString("fail"));
+}
 
-	SuccessText->SetText(FText::FromString("¼º°ø")); // ¼º°ø ½Ã
-	//SuccessText->SetText(FText::FromString("½ÇÆÐ")); ½ÇÆÐ ½Ã
+UNetworkManager* UClientScreen::GetNetworkManager() const
+{
+	return GetGameInstance()->GetSubsystem<UNetworkManager>();
 }

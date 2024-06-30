@@ -67,6 +67,7 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	//float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInsigator, AActor* DamageCauser) override;
 	virtual void PostInitializeComponents() override;
+	virtual void BeginDestroy() override;
 	const void GetSpringArmRotator(FRotator& Rotator);
 	const void GetSpringArmLocation(FVector& Location);
 	const int32 GetCharacterLevel();
@@ -87,11 +88,13 @@ public:
 	void AttachWeapon();
 	void SetFightState(bool IsFight);
 	void SetAimYaw(float Yaw);
+	void PlayShotSound();
 	void SetCharacterMovementRotation(bool bState);
 	void Fire();
 	void UpdateHpWiget();
 	void DeathEvent();
 	void SetGuardPoint(float Guard);
+	void UpdateGuradUI(float Max, float Cur = 0.f);
 	class AWeapon* GetMyWeapon() const;
 	void ExpUp(float Exp);//Test
 
@@ -103,6 +106,7 @@ public:
 	float GetAimYaw();
 	float& GetCurrentHP();
 	float GetCurrentMaxHp();
+	float GetCurrentGuard();
 	
 	UPROPERTY(EditAnywhere)
 	float CharacterSightRange = 700.f;
@@ -118,13 +122,22 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void CharacterEatItem(float value);
 
+	UFUNCTION(BlueprintCallable)
+	void SetPlayerColor();
+	UFUNCTION(BlueprintCallable)
+	class UHUDWidget* GetHUDWidget();
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UPaperSpriteComponent* PaperSprite;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UPaperSprite* SpritePlayer;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UParticleSystemComponent* LevelUpParticleSystemComponent;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 		class UNiagaraSystem* HealParticles;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TArray<FColor> PlayerColors;
 private:
 	UFUNCTION()
 		void TakenDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigateBy, AActor* DamageCauser);
@@ -187,6 +200,14 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		int32 MaxNum;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* ShootSound;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* LevelUpSound;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* ItemEquipSound;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* HitSound;
 	UPROPERTY()
 		class UTexture2D* SelectedAbility;
 
@@ -218,7 +239,10 @@ private:
 		bool bIsLevelUp;
 	UPROPERTY()
 		bool bChangeColor;
-		
+	UPROPERTY()
+		class ATeam_AIGameMode* MyGameMode;
+	UPROPERTY()
+		class UNetworkManager* NetworkManager;
 public:
 	bool IsMyPlayer();
 
@@ -244,9 +268,18 @@ public:
 
 	AWeapon* GetWeapon();
 	class UNetworkManager* GetNetworkManager() const;
+	class ATeam_AIGameMode* GetTeam_AIGameMode();
 	void UpdateHP(float hp);
+	void UpdateGuard(float guard);
 	void SetDead(bool dead);
-	class AAbilityManager* GetAbilityManger();
 	virtual void PossessedBy(AController* NewController) override;
 	class AAbilityManager* GetAbilityManager();
+
+	void RecvCharacterMaxHpUp(float value);
+	void RecvCharacterLevelUp(int64 lv);
+	void RecvCharacterAttackUp(float value);
+	void RecvCharacterEatItem(float value);
+
+	void RecvExpUp(float exp);
+	void RecvLvUP(int64 level, float currHP);
 };

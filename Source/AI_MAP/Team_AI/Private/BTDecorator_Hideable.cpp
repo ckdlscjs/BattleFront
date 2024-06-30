@@ -22,7 +22,7 @@ bool UBTDecorator_Hideable::CalculateRawConditionValue(UBehaviorTreeComponent& O
 	GetWorld()->OverlapMultiByProfile(OverlapResults, AICharacter->GetActorLocation(), FQuat::Identity, FName("WallCheck"), FCollisionShape::MakeBox(FVector(1000.0f, 1000.0f, 10.0f)), CollisionQueryParam);
     if(OverlapResults.Num())
     {
-        DrawDebugBox(GetWorld(), AICharacter->GetActorLocation(), FVector(1000.0f, 1000.0f, 10.0f), FColor::Red);
+        //DrawDebugBox(GetWorld(), AICharacter->GetActorLocation(), FVector(1000.0f, 1000.0f, 10.0f), FColor::Red);
         return true;
     }
     return false;

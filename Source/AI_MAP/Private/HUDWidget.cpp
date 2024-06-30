@@ -8,8 +8,11 @@
 #include "Engine/Texture2D.h"
 #include "SkillWidget.h"
 #include "Components/TextBlock.h"
-
+#include "Team_AIMagneticField.h"
+#include "Team_AIGameMode.h"
 #include "SkillChooseWidget.h"
+#include "Kismet/GameplayStatics.h"
+#include "WorldMapWidget.h"
 
 void UHUDWidget::NativeConstruct()
 {
@@ -20,7 +23,11 @@ void UHUDWidget::NativeConstruct()
 	ChooseSkillWidget = Cast<USkillChooseWidget>(GetWidgetFromName(TEXT("WBP_SkillChoose")));
 	CurrentGuardText = Cast<UTextBlock>(GetWidgetFromName(TEXT("CurrentGuard")));
 	MaxGuardText = Cast<UTextBlock>(GetWidgetFromName(TEXT("MaxGuard")));
+	WorldMapWidget = Cast<UWorldMapWidget>(GetWidgetFromName(TEXT("WBP_WorldMap")));
 	PanelSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(ChooseSkillWidget);
+	WorldMapVisible = false;
+	WorldMapWidget->SetVisibility(ESlateVisibility::Hidden);
+	MyTimer = 0.f;
 }
 void UHUDWidget::ShowChooseSkill()
 {
@@ -98,4 +105,31 @@ void UHUDWidget::UpdateGuardPoint(int32 Cur, int32 Max)
 void UHUDWidget::SetCharacterLevel(int32 Level)
 {
 	CharacterWidget->SetCharacterLevel(Level);
+}
+
+void UHUDWidget::SetMageticeFieldTimer(float Timer)
+{
+	FText Time = FText::FromString(FString::FromInt(Timer));
+	TimerText->SetText(Time);
+}
+
+void UHUDWidget::ToggleWorldMap()
+{
+	WorldMapVisible = !WorldMapVisible;
+	WorldMapWidget->SetVisibility(WorldMapVisible ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+}
+
+void UHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+	if (MagneticField == nullptr)
+	{
+		ATeam_AIGameMode* GameMode = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+		MagneticField = GameMode->GetMagneticField();
+	}
+	if (MagneticField != nullptr)
+	{
+		MyTimer = MagneticField->GetRemainTime();
+		SetMageticeFieldTimer(MyTimer);
+	}	
 }

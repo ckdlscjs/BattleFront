@@ -17,6 +17,13 @@ void ATeam_AISpawnPointBoss::PostInitializeComponents()
 	Super::PostInitializeComponents();
 }
 
+void ATeam_AISpawnPointBoss::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (GetWorld())
+		GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+}
+
 
 void ATeam_AISpawnPointBoss::BeginPlay()
 {
@@ -40,6 +47,8 @@ void ATeam_AISpawnPointBoss::SpawnPointDestruction()
 		SpawnTimerHandle,
 		[this]() -> void
 		{
+			if (!IsValid(this))
+				return;
 			float ratio = 1.0f - (DissolveTimeCurrent / MeshDissolveTime);
 			//material translucen
 			for (const auto& iter : MaterialDynamicInsts)
@@ -52,7 +61,7 @@ void ATeam_AISpawnPointBoss::SpawnPointDestruction()
 			if (DissolveTimeCurrent >= MeshDissolveTime)
 			{
 				Fracture->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-				GetWorldTimerManager().ClearTimer(SpawnTimerHandle);
+				GetWorldTimerManager().PauseTimer(SpawnTimerHandle);
 				Destroy();
 			}
 		},

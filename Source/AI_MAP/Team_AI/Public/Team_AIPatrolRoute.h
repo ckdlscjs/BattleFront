@@ -25,8 +25,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool CheckSpawnPossible() const;
 	UFUNCTION(BlueprintCallable)
-
 	const TArray<class ATeam_AISpawnPointPatrol*>& GetSpawnPoints() const;
+
+	class ATeam_AISpawnPointPatrol* GetSpawnPoint(int32 idx);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

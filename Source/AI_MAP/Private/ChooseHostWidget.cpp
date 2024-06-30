@@ -6,6 +6,7 @@
 #include "Components/Button.h"
 #include "HostScreen.h"
 #include "ClientScreen.h"
+#include "Team_AIGameMode.h"
 
 void UChooseHostWidget::NativeConstruct()
 {
@@ -24,31 +25,31 @@ void UChooseHostWidget::NativeConstruct()
 
 void UChooseHostWidget::OkButtonClick()
 {
-	RemoveFromParent();
 	if (bIsHost == true)
 	{
 		if (HostWidget != nullptr)
 		{
-			UHostScreen* HostScreen = CreateWidget<UHostScreen>(GetWorld(), HostWidget);
+			HostScreen = CreateWidget<UHostScreen>(GetWorld(), HostWidget);
 			if (HostScreen)
 			{
 				HostScreen->AddToViewport();
 			}
 		}
-		// host È­¸é 
+		// host È­ï¿½ï¿½ 
 	}
 	else if (bIsHost == false)
 	{
 		if (ClientWidget != nullptr)
 		{
-			UClientScreen* ClientScreen = CreateWidget<UClientScreen>(GetWorld(), ClientWidget);
+			ClientScreen = CreateWidget<UClientScreen>(GetWorld(), ClientWidget);
 			if (ClientScreen)
 			{
 				ClientScreen->AddToViewport();
 			}
 		}
-		//client È­¸é
+		//client È­ï¿½ï¿½
 	}
+	RemoveFromParent();
 }
 
 void UChooseHostWidget::HostCheckBoxClicked(bool bIsCheck)
@@ -73,4 +74,19 @@ void UChooseHostWidget::ClientCheckBoxClicked(bool bIsCheck)
 		}
 		bIsHost = false;
 	}
+}
+
+UHostScreen* UChooseHostWidget::GetHostScreen()
+{
+	return HostScreen;
+}
+
+UClientScreen* UChooseHostWidget::GetClientScreen()
+{
+	return ClientScreen;
+}
+
+UNetworkManager* UChooseHostWidget::GetNetworkManager() const
+{
+	return GetGameInstance()->GetSubsystem<UNetworkManager>();
 }

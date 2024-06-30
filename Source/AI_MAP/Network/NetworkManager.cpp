@@ -7,7 +7,7 @@
 #include "ClientPacketHandler.h"
 #include "Kismet/GameplayStatics.h"
 #include "Team_AIGameMode.h"
-//#include "GameCharacter.h"
+#include "GameCharacter.h"
 //#include "Projectile.h"
 //#include "CharacterController.h"
 //#include "Weapon.h"
@@ -15,6 +15,8 @@
 
 //#include "GenericPlatform/GenericPlatformMisc.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "RunExternalExe.h"
+#include "ChooseHostWidget.h"
 
 
 UNetworkManager::UNetworkManager()
@@ -30,12 +32,28 @@ UNetworkManager::UNetworkManager()
 	//auto BP_AIEnemyRecv = ConstructorHelpers::FClassFinder<ATeam_AICharacter_Recv>(TEXT("/Game/Level_TeamMap/Blueprint/BP_AIEnemy_Recv.BP_AIEnemy_Recv_C"));
 	//if (BP_AIEnemyRecv.Succeeded())
 	//	AIClassRecv = BP_AIEnemyRecv.Class;
+	externalExe = NewObject<URunExternalExe>();
 }
 
-void UNetworkManager::ConnectToGameServer()
+FString UNetworkManager::GetLocalIPAddress()
 {
+	bool bCanBindAll;
+	TSharedPtr<FInternetAddr> Addr = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->GetLocalHostAddr(*GLog, bCanBindAll);
+
+	if (Addr.IsValid())
+	{
+		return Addr->ToString(false);
+	}
+
+	return FString("Unable to determine IP address");
+}
+
+bool UNetworkManager::ConnectToGameServer(FString ip)
+{
+	IpAddress = ip;
+	//FString temp = GetLocalIPAddress();
 	if (!SetGameMode(Cast<ATeam_AIGameMode>(GetWorld()->GetAuthGameMode())))
-		return;
+		return false;
 	Socket = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateSocket(TEXT("Stream"), TEXT("Client Socket"));
 
 	FIPv4Address Ip;
@@ -45,13 +63,13 @@ void UNetworkManager::ConnectToGameServer()
 	InternetAddr->SetIp(Ip.Value);
 	InternetAddr->SetPort(Port);
 
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Connecting To Server...")));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Connecting To Server...")));
 
 	bool Connected = Socket->Connect(*InternetAddr);
 
 	if (Connected)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Connection Success")));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Connection Success")));
 
 		// Session
 		GameServerSession = MakeShared<PacketSession>(Socket);
@@ -65,8 +83,9 @@ void UNetworkManager::ConnectToGameServer()
 	}
 	else
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Connection Failed")));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Connection Failed")));
 	}
+	return Connected;
 }
 
 bool UNetworkManager::SetGameMode(ATeam_AIGameMode* worldGameMode)
@@ -132,6 +151,17 @@ void UNetworkManager::SendPacket(SendBufferRef SendBuffer)
 	GameServerSession->SendPacket(SendBuffer);
 }
 
+void UNetworkManager::HandlePlayerCount(const Protocol::S_PLAYERCOUNT& playerCount)
+{
+	if (!GameMode)
+		return;
+
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	GameMode->SetPlayerCount(playerCount);
+}
+
 void UNetworkManager::HandleSpawn(const Protocol::ObjectInfo& ObjectInfo, bool IsMine)
 {
 	if (!GameMode)
@@ -146,7 +176,7 @@ void UNetworkManager::HandleSpawn(const Protocol::ObjectInfo& ObjectInfo, bool I
 	if (GameMode->GetPlayers().Find(ObjectInfo.object_id()))
 		return;
 
-	GameMode->SetPlayerInfo(IsMine, ObjectInfo.pos_info());
+	GameMode->SetPlayerInfo(IsMine, ObjectInfo.pos_info(), ObjectInfo.spawnidx());
 }
 
 void UNetworkManager::HandleSpawn(const Protocol::S_ENTER_GAME& EnterGamePkt)
@@ -294,14 +324,54 @@ void UNetworkManager::HandleDead(const Protocol::S_PLAYERDEAD& playerDeadPkt)
 	GameMode->SetPlayerDead(playerDeadPkt);
 }
 
-void UNetworkManager::HandleSkillRange(const Protocol::S_PLAYERSKILL_RANGE& rangeSkillPkt)
+void UNetworkManager::HandleExpUP(const Protocol::S_EXPUP& expUpPkt)
 {
 	if (!GameMode)
 		return;
 	if (Socket == nullptr || GameServerSession == nullptr)
 		return;
 
-	GameMode->SetPlayerSKill(rangeSkillPkt);
+	GameMode->SetPlayerExpUP(expUpPkt);
+}
+
+void UNetworkManager::HandleLvUP(const Protocol::S_LVUP& lvUpPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	GameMode->SetPlayerLVUP(lvUpPkt);
+}
+
+void UNetworkManager::HandleSkillBomb(const Protocol::S_PLAYERSKILL_BOMB& bombPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	GameMode->SetPlayerSKill(bombPkt);
+}
+
+void UNetworkManager::HandleSkillChemical(const Protocol::S_PLAYERSKILL_CHEMICAL& chemPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	GameMode->SetPlayerSKill(chemPkt);
+}
+
+void UNetworkManager::HandleSkillGranade(const Protocol::S_PLAYERSKILL_GRANADE& granadePkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	GameMode->SetPlayerSKill(granadePkt);
 }
 
 void UNetworkManager::HandleSkillGuard(const Protocol::S_PLAYERSKILL_GUARD& guardSkillPkt)
@@ -365,6 +435,57 @@ void UNetworkManager::HandleMoveDrone(const Protocol::S_MOVEDRONE& moveDrnPkt)
 
 void UNetworkManager::HandleReturnDrone(const Protocol::S_RETURNDRONE& retDrnPkt)
 {
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+	GameMode->SetReturnDrone(retDrnPkt);
+}
+
+void UNetworkManager::HandleAttackDrone(const Protocol::S_ATTACKDRONE& atkDrnPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	GameMode->SetAttackDrone(atkDrnPkt);
+}
+
+void UNetworkManager::HandleEatItemMaxHP(const Protocol::S_EATITEM_MAXHPUP& maxHpPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+	GameMode->SetEatItemMaxHP(maxHpPkt);
+}
+
+void UNetworkManager::HandleEatItemLVUP(const Protocol::S_EATITEM_LVUP& lvPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+	GameMode->SetEatItemLVUP(lvPkt);
+}
+
+void UNetworkManager::HandleEatItemDmgUP(const Protocol::S_EATITEM_DMGUP& dmgUpPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+	GameMode->SetEatItemDmgUP(dmgUpPkt);
+}
+
+void UNetworkManager::HandleEatItemHealUp(const Protocol::S_EATITEM_HEALHP& healedPkt)
+{
+	if (!GameMode)
+		return;
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+	GameMode->SetEatItemHealUP(healedPkt);
 }
 
 void UNetworkManager::HandleAISpawn(const Protocol::S_AISPAWN_RANDOM& AiSpawnPkt)
@@ -509,6 +630,21 @@ void UNetworkManager::HandleAIAttack(const Protocol::S_AIATTACK& AIattackPkt)
 	//enemy->RecvAttack();
 }
 
+void UNetworkManager::HandleAIAttackBoss(const Protocol::S_AIATTACK_BOSS2& aiAttackBossPkt)
+{
+	if (!GameMode)
+		return;
+
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	auto* World = GetWorld();
+	if (World == nullptr)
+		return;
+
+	GameMode->SetAIBossAttack2(aiAttackBossPkt);
+}
+
 void UNetworkManager::HandleAIRotate(const Protocol::S_AIROTATE& AIRotPkt)
 {
 	if (!GameMode)
@@ -597,4 +733,80 @@ void UNetworkManager::HandleAIKnocksBack(const Protocol::S_AI_KNOCKS_BACK& AIKno
 		return;
 
 	GameMode->SetKnocksBack(AIKnocksBock);
+}
+
+void UNetworkManager::HandleRmvStartWidget(const Protocol::S_GAMESTART& pkt)
+{
+	if (!GameMode)
+		return;
+
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	auto* World = GetWorld();
+	if (World == nullptr)
+		return;
+
+	GameMode->RemoveStartWidget();
+}
+
+void UNetworkManager::HandleSetMagneticField(const Protocol::S_SET_MAGNETICFIELD& magPkt)
+{
+	if (!GameMode)
+		return;
+
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	auto* World = GetWorld();
+	if (World == nullptr)
+		return;
+
+	GameMode->SetMagneticField(magPkt);
+}
+
+void UNetworkManager::HandleSetWorldLV(const Protocol::S_WORLD_LVUP& worldlvPkt)
+{
+	if (!GameMode)
+		return;
+
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	auto* World = GetWorld();
+	if (World == nullptr)
+		return;
+
+	GameMode->SetGameLevel(worldlvPkt.worldlevel());
+}
+
+void UNetworkManager::ChangeMainBGM(const Protocol::S_GAMESTART& pkt)
+{
+	if (!GameMode)
+		return;
+
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	auto* World = GetWorld();
+	if (World == nullptr)
+		return;
+
+	GameMode->StopAudioSystem(TEXT("BGM_Wait"));
+	GameMode->PlayAudioSystem(TEXT("BGM_Main"));
+}
+
+void UNetworkManager::HandleGameResult(const Protocol::S_GAMERESULT& pkt)
+{
+	if (!GameMode)
+		return;
+
+	if (Socket == nullptr || GameServerSession == nullptr)
+		return;
+
+	auto* World = GetWorld();
+	if (World == nullptr)
+		return;
+
+	GameMode->ViewGameResult(pkt);
 }

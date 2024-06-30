@@ -435,6 +435,7 @@ class ObjectInfo final :
   enum : int {
     kPosInfoFieldNumber = 3,
     kObjectIdFieldNumber = 1,
+    kSpawnIdxFieldNumber = 4,
     kObjectTypeFieldNumber = 2,
   };
   // .Protocol.PosInfo pos_info = 3;
@@ -464,6 +465,15 @@ class ObjectInfo final :
   void _internal_set_object_id(uint64_t value);
   public:
 
+  // uint64 spawnIdx = 4;
+  void clear_spawnidx();
+  uint64_t spawnidx() const;
+  void set_spawnidx(uint64_t value);
+  private:
+  uint64_t _internal_spawnidx() const;
+  void _internal_set_spawnidx(uint64_t value);
+  public:
+
   // .Protocol.ObjectType object_type = 2;
   void clear_object_type();
   ::Protocol::ObjectType object_type() const;
@@ -483,6 +493,7 @@ class ObjectInfo final :
   struct Impl_ {
     ::Protocol::PosInfo* pos_info_;
     uint64_t object_id_;
+    uint64_t spawnidx_;
     int object_type_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -1057,6 +1068,26 @@ inline void ObjectInfo::set_allocated_pos_info(::Protocol::PosInfo* pos_info) {
   }
   _impl_.pos_info_ = pos_info;
   // @@protoc_insertion_point(field_set_allocated:Protocol.ObjectInfo.pos_info)
+}
+
+// uint64 spawnIdx = 4;
+inline void ObjectInfo::clear_spawnidx() {
+  _impl_.spawnidx_ = uint64_t{0u};
+}
+inline uint64_t ObjectInfo::_internal_spawnidx() const {
+  return _impl_.spawnidx_;
+}
+inline uint64_t ObjectInfo::spawnidx() const {
+  // @@protoc_insertion_point(field_get:Protocol.ObjectInfo.spawnIdx)
+  return _internal_spawnidx();
+}
+inline void ObjectInfo::_internal_set_spawnidx(uint64_t value) {
+  
+  _impl_.spawnidx_ = value;
+}
+inline void ObjectInfo::set_spawnidx(uint64_t value) {
+  _internal_set_spawnidx(value);
+  // @@protoc_insertion_point(field_set:Protocol.ObjectInfo.spawnIdx)
 }
 
 // -------------------------------------------------------------------

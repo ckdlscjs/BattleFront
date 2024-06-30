@@ -17,7 +17,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Materials/MaterialParameterCollection.h"
-
+#include "HUDWidget.h"
+#include "MouseWidget.h"
 // Server
 #include "NetworkManager.h"
 #include "ClientPacketHandler.h"
@@ -73,12 +74,14 @@ void ACharacterController::Tick(float DeltaTime)
 		return;
 	}
 		
-	FVector Forward = GameCharacter->GetActorForwardVector();
+	//FVector Forward = GameCharacter->GetActorForwardVector();
 	FVector HitLoc = Result.Location;
 	FVector ActorLoc = GameCharacter->GetActorLocation();
-	FVector Temp = HitLoc - ActorLoc;
-	Temp.Z = Forward.Z;
-	FRotator rot = UKismetMathLibrary::FindLookAtRotation(Forward, Temp);
+	//FVector Temp = HitLoc - ActorLoc;
+	//Temp.Z = Forward.Z;
+	FRotator rot = UKismetMathLibrary::FindLookAtRotation(ActorLoc, HitLoc);
+	rot.Pitch = 0.0f;
+	rot.Roll = 0.0f;
 	GameCharacter->SetActorRotation(rot);
 	GameCharacter->DesRot = GameCharacter->GetActorRotation();
 
@@ -140,16 +143,21 @@ void ACharacterController::SetupInputComponent()
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ACharacterController::CharacterAction);
 		EnhancedInputComponent->BindAction(CameraReset, ETriggerEvent::Started, this, &ACharacterController::CameraRotationReset);
 		EnhancedInputComponent->BindAction(AbilityChooseAction, ETriggerEvent::Started, this, &ACharacterController::AbilityChoose);
+		EnhancedInputComponent->BindAction(WorldMapToggle, ETriggerEvent::Started, this, &ACharacterController::WorldMapWidgetToggle);
 		
 		//Test Code
+		/*
 		EnhancedInputComponent->BindAction(LevelUpAction, ETriggerEvent::Started, this, &ACharacterController::LevelUp);
 		EnhancedInputComponent->BindAction(ExpUpAction, ETriggerEvent::Started, this, &ACharacterController::ExpUp);
+		*/
 		/////////////////////
 	}
 }
 
 void ACharacterController::Move(const FInputActionValue& Value)
 {
+	if (!GameCharacter)
+		return;
 	if (IsCharaterDeath() == true)
 	{
 		return;
@@ -157,16 +165,7 @@ void ACharacterController::Move(const FInputActionValue& Value)
 	bool IsFight = GameCharacter->IsFight();
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	/*UPathFollowingComponent* PFollowComp = InitNavigationControl(this);*/
-	StopMovement();
 	FRotator Rot(0.f);
-	if (IsFight == false)
-	{
-		GameCharacter->SetCharacterMovementRotation(true);
-	}
-	else
-	{
-		GameCharacter->SetCharacterMovementRotation(false);
-	}
 	GameCharacter->GetSpringArmRotator(Rot);
 	FVector RightVec = UKismetMathLibrary::GetRightVector(FRotator(0, Rot.Yaw, Rot.Roll));
 	GameCharacter->AddMovementInput(RightVec, MovementVector.X);
@@ -184,6 +183,8 @@ void ACharacterController::Move(const FInputActionValue& Value)
 
 void ACharacterController::CameraDetachState()
 {
+	if (!GameCharacter)
+		return;
 	bDetachState = !bDetachState;
 	if (bDetachState)
 	{
@@ -197,6 +198,8 @@ void ACharacterController::CameraDetachState()
 
 void ACharacterController::CameraMove(const FInputActionValue& Value)
 {
+	if (!GameCharacter)
+		return;
 	if (bDetachState)
 	{
 		FVector2D MouseLocation = Value.Get<FVector2D>();
@@ -223,7 +226,10 @@ void ACharacterController::CameraMove(const FInputActionValue& Value)
 
 void ACharacterController::CameraRotation(const FInputActionValue& Value)
 {
+	if (!GameCharacter)
+		return;
 	FVector2D Vector = Value.Get<FVector2D>();
+
 	if (Vector.X == 0)
 	{
 		GameCharacter->AddSpringArmRotaion(FRotator(0.f, 1.f, 0.f));
@@ -236,6 +242,9 @@ void ACharacterController::CameraRotation(const FInputActionValue& Value)
 }
 void ACharacterController::CharacterAction(const FInputActionValue& Value)
 {
+	if (!GameCharacter)
+		return;
+
 	if (IsCharaterDeath() == true)
 	{
 		return;
@@ -256,11 +265,15 @@ void ACharacterController::CharacterAction(const FInputActionValue& Value)
 
 void ACharacterController::SaveCameraRotation()
 {
+	if (!GameCharacter)
+		return;
 	GameCharacter->SaveSpringArmRotation();
 }
 
 void ACharacterController::EdgeCameraMove()
 {
+	if (!GameCharacter)
+		return;
 	if (bDetachState == false)
 	{
 		return;
@@ -310,6 +323,8 @@ void ACharacterController::EdgeCameraMove()
 
 void ACharacterController::CameraRotationReset(const FInputActionValue& Value)
 {
+	if (!GameCharacter)
+		return;
 	bool bReset = Value.Get<bool>();
 	if (bReset)
 	{
@@ -319,7 +334,10 @@ void ACharacterController::CameraRotationReset(const FInputActionValue& Value)
 
 void ACharacterController::AbilityChoose(const FInputActionValue& Value)
 {
+	if (!GameCharacter)
+		return;
 	FVector Select = Value.Get<FVector>();
+
 	bool isCharacterUp = GameCharacter->GetIsLevelUp();
 	if (isCharacterUp == false)
 	{
@@ -340,6 +358,10 @@ void ACharacterController::AbilityChoose(const FInputActionValue& Value)
 	else if (Select == Third)
 	{
 		index = 2;
+	}
+	if (AbilityChooseSound)
+	{
+		UGameplayStatics::PlaySound2D(this, AbilityChooseSound);
 	}
 	GameCharacter->SetAbility(index);
 }
@@ -376,48 +398,39 @@ bool ACharacterController::IsCharaterDeath()
 {
 	return bIsPlayerDeath;
 }
+void ACharacterController::BeginDestroy()
+{
+	Super::BeginDestroy();
+}
 bool ACharacterController::CheckActorTag(AActor* HitActor)
 {
 	bool Check = true;
-	//if (HitActor != nullptr)
-	//{
-	//	Check = (HitActor->ActorHasTag(TEXT("Enemy"))||HitActor->ActorHasTag(TEXT("Player")));
-	//}
-
 	return Check;
 }
-//FVector ACharacterController::GetHitResultLoc()
-//{
-//	FVector MouseLoc(0.f);
-//	FVector MouseDir(0.f);
-//	FHitResult Result;
-//	//bool bHitSuccess = false;
-//	//
-//	//bHitSuccess = GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, true, Result);
-//	//if (bHitSuccess == true)
-//	//{
-//	//	DrawDebugSphere(GetWorld(), Result.Location, 10, 2, FColor::Red, true, -1, 0, 2);
-//	//	return Result.Location;
-//	//}
-//	if (DeprojectMousePositionToWorld(MouseLoc, MouseDir))
-//	{
-//		FRotator rot = FRotator::ZeroRotator;
-//		MouseDir = MouseLoc + (MouseDir * 100000);
-//		
-//		GetWorld()->LineTraceSingleByChannel(Result, MouseLoc, MouseDir, ECollisionChannel::ECC_Visibility);
-//		AActor* Obj = Result.GetActor();
-//		if (!Obj->ActorHasTag(TEXT("Enemy")))
-//		{
-//			int32 a = 0;
-//			a = 10;
-//		}
-//		DrawDebugSphere(GetWorld(), Result.Location, 3, 3, FColor::Red, true, 1, 1, 3);
-//		return Result.Location;
-//	}
-//	return FVector::ZeroVector;
-//}
+
+void ACharacterController::SetMyMouseCursor()
+{
+	bShowMouseCursor = true;
+	UMouseWidget* MouseWidget = CreateWidget<UMouseWidget>(GetWorld(), MouseCursorClass);
+	if (MouseWidget)
+	{
+		SetMouseCursorWidget(EMouseCursor::Default, MouseWidget);
+	}
+	//DefaultMouseCursor = EMouseCursor::Default;
+	//
+	//CurrentMouseCursor = DefaultMouseCursor;
+}
+
+void ACharacterController::WorldMapWidgetToggle()
+{
+	if (!GameCharacter)
+		return;
+	GameCharacter->GetHUDWidget()->ToggleWorldMap();
+}
+
 
 /// test function
+/*
 void ACharacterController::LevelUp(const FInputActionValue& Value)
 {
 	int32 PlayerLevel = GameCharacter->GetCharacterLevel();
@@ -433,7 +446,7 @@ void ACharacterController::ExpUp(const FInputActionValue& Value)
 		GameCharacter->ExpUp(500);
 	}
 }
-
+*/
 UNetworkManager* ACharacterController::GetNetworkManager() const
 {
 	return GetGameInstance()->GetSubsystem<UNetworkManager>();
@@ -442,4 +455,9 @@ UNetworkManager* ACharacterController::GetNetworkManager() const
 void ACharacterController::SetCharacter(AGameCharacter* player)
 {
 	GameCharacter = player;
+}
+
+AActor* ACharacterController::GetGameCharacter() const
+{
+	return GameCharacter;
 }

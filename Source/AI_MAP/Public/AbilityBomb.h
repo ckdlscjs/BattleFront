@@ -26,12 +26,16 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	
-	virtual void SetLocation(FVector& Location)override;
 	virtual void AbilityLevelUp() override;
 	virtual int32 GetProjCount() override;
+	virtual float GetAbilityDetail() override;
+	virtual void SetAbilityDetail(float Details) override;
+	virtual void PlaySound(USoundBase* Sound) override;
+	virtual void SetLocation(FVector& Location, int abilityIdx) override ;
 private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		class UNiagaraSystem* HitParticles;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* BombSound;
 };

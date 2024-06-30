@@ -30,12 +30,12 @@ UENUM(BlueprintType)
 enum class EPhaseTime : uint8
 {
 	Default = 0,
-	PHASEDEFULAT = 10 UMETA(DisplayName = "Time0"),
-	PHASE0 = 8 UMETA(DisplayName = "Time1"),
-	PHASE1 = 6 UMETA(DisplayName = "Time2"),
-	PHASE2 = 4 UMETA(DisplayName = "Time3"),
-	PHASE3 = 2 UMETA(DisplayName = "Time4"),
-	PHASE4 = 0 UMETA(DisplayName = "Time5"),
+	PHASEDEFULAT = 60 UMETA(DisplayName = "Time0"),
+	PHASE0 = 60 UMETA(DisplayName = "Time1"),
+	PHASE1 = 40 UMETA(DisplayName = "Time2"),
+	PHASE2 = 30 UMETA(DisplayName = "Time3"),
+	PHASE3 = 20 UMETA(DisplayName = "Time4"),
+	PHASE4 = 10 UMETA(DisplayName = "Time5"),
 };
 
 UCLASS()
@@ -48,7 +48,8 @@ public:
 	ATeam_AIMagneticField();
 	// Called every frame
 	virtual void PostInitializeComponents() override;
-
+	virtual void BeginDestroy() override;
+	float GetRemainTime() const;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -98,4 +99,13 @@ protected:
 	class UMaterialParameterCollection* FMC_SafetyField;
 
 	TArray<TPair<const EMagneticPhase, const EPhaseTime>> MagenticPhase;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Damage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float retTime;
+
+public:
+	void StartMagnaticField();
+	void RecvUpdateSafetyFieldValue(FLinearColor rgb, float radius, float time);
+	class UNetworkManager* GetNetworkManager() const;
 };

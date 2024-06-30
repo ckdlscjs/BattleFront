@@ -22,17 +22,23 @@ protected:
 	
 public:
 	virtual void Tick(float DeltaTime) override;
-	virtual void SetLocation(FVector& Location) override;
+	virtual void SetLocation(FVector& Location, int abilityIdx) override;
 	virtual DroneState GetDroneState() override;
 	virtual void SetDroneStateReturn()override;
-	virtual void ReturnDrone(FVector& Location)override;
 	virtual void SetDroneNoneState()override;
 	virtual void AbilityLevelUp() override;
 	virtual void SetDroneRotation() override;
+	virtual float GetAbilityDetail();
+	virtual void SetAbilityDetail(float Details) override;
+	virtual void PlaySound(USoundBase* Sound) override;
+	virtual void PlayDroneMoveSound() override;
+	virtual void PlayDroneAttackSound() override;
 	void Attack();
 	bool MoveToTarget();
 	void ChangeAttackStatus(bool bChange);
 	bool GetAttackState();
+	virtual void SetDepthStencil() override;
+	virtual void SetVisibility(bool visible) override;
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UParticleSystemComponent* DroneParticleSystemComponent;
@@ -52,6 +58,10 @@ private:
 		FVector TargetLocation;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", meta = (AllowPrivateAccess = "true"))
 		DroneState State;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* DroneMoveSound;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* DroneAttackSound;
 	UPROPERTY()
 		float TargetDistance;
 	UPROPERTY()
@@ -64,4 +74,6 @@ private:
 		float CurrentDistance = 0.f;
 	UPROPERTY()
 		FVector StartLocation;
+public:
+	void ActivateAttakPaticle();
 };

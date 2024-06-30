@@ -31,7 +31,7 @@ void ATeam_AIPatrolRoute::BeginPlay()
 
 void ATeam_AIPatrolRoute::OnCollisionEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("OutPatrolRoute!")));
+	//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("OutPatrolRoute!")));
 	ATeam_AICharacterBase* AICharacter = Cast<ATeam_AICharacterBase>(OtherActor);
 	if (!AICharacter)
 		return;
@@ -91,5 +91,7 @@ const TArray<class ATeam_AISpawnPointPatrol*>& ATeam_AIPatrolRoute::GetSpawnPoin
 	return SpawnPoints;
 }
 
-
-
+ATeam_AISpawnPointPatrol* ATeam_AIPatrolRoute::GetSpawnPoint(int32 idx)
+{
+	return SpawnPoints[idx];
+}

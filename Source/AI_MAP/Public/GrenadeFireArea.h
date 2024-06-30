@@ -31,6 +31,8 @@ private:
 		float DurationTime;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		class UParticleSystemComponent* ParticleComponent;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* FireSound;
 	float Damage;
 	UPROPERTY()
 	FTimerHandle DamageTimerHandle;

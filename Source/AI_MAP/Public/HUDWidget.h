@@ -24,6 +24,11 @@ public:
 	void UpdateExpBar(float MaxExp, float CurrExp);
 	void UpdateGuardPoint(int32 Cur, int32 Max);
 	void SetCharacterLevel(int32 Level);
+	void SetMageticeFieldTimer(float Timer);
+
+	void ToggleWorldMap();
+protected:
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class UCharacterIconWidget* CharacterWidget;
@@ -33,8 +38,16 @@ protected:
 		class UTextBlock* CurrentGuardText;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class UTextBlock* MaxGuardText;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (BindWidget))
+		class UTextBlock* TimerText;
 	UPROPERTY()
 		class UCanvasPanelSlot* PanelSlot;
+	UPROPERTY()
+		const class ATeam_AIMagneticField* MagneticField;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+		class UWorldMapWidget* WorldMapWidget;
+	bool WorldMapVisible;
+	float MyTimer;
 	
 protected:
 	virtual void NativeConstruct() override;

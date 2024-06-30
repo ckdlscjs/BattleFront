@@ -20,11 +20,14 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	void DisableController();
 	bool IsCharaterDeath();
+	void SetMyMouseCursor();
+	virtual void BeginDestroy() override;
+
 protected:
 	virtual void BeginPlay() override;
 
 	virtual void SetupInputComponent() override;
-
+	
 	void Move(const FInputActionValue& Value);
 	void CameraDetachState();
 	void CameraMove(const FInputActionValue& Value);
@@ -35,12 +38,15 @@ protected:
 	void CameraRotationReset(const FInputActionValue& Value);
 	void AbilityChoose(const FInputActionValue& Value);
 	void GetHitResultLoc(FHitResult& Hit);
-
 	bool CheckActorTag(AActor* HitActor);
 
+	void WorldMapWidgetToggle();
+
 	/*Test Code*/
+	/*
 	void LevelUp(const FInputActionValue& Value);
 	void ExpUp(const FInputActionValue& Value);
+	*/
 	/******************************************/
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
@@ -59,8 +65,13 @@ private:
 	class UInputAction* CameraReset; // Rotation Reset
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 		class  UInputAction* AbilityChooseAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+		class  UInputAction* WorldMapToggle;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* AbilityChooseSound;
 	UPROPERTY(EditAnywhere, Category = "Combat")
 		TSubclassOf<class AProjectile> ProjectileClass;
+
 	UPROPERTY()
 		FVector AimVector;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
@@ -69,11 +80,15 @@ private:
 		bool bCanShoot;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat", meta = (AllowPrivateAccess = "true"))
 		bool bIsPlayerDeath;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Widget", meta = (AllowPrivateAccess = "true"))
+		TSubclassOf<UUserWidget> MouseCursorClass;
 	// Test Code
+		/*
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 		class  UInputAction* LevelUpAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 		class  UInputAction* ExpUpAction;
+		*/
 	/*****************************************/
 	UPROPERTY(EditAnywhere)
 	class AGameCharacter* GameCharacter;
@@ -92,4 +107,5 @@ public:
 	const float MOVE_PACKET_SEND_DELAY = 0.0f;
 	float MovePacketSendTimer = MOVE_PACKET_SEND_DELAY;
 	void SetCharacter(AGameCharacter* player);
+	AActor* GetGameCharacter() const;
 };

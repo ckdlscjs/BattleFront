@@ -24,8 +24,11 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual	void HealCharacterHp(float& HealthPoint, float MaxPoint) override;
 	virtual void AbilityLevelUp() override;
-
+	virtual float GetAbilityDetail() override;
+	virtual void SetAbilityDetail(float Details) override;
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", meta = (AllowPrivateAccess = "true"))
 		float HealAmount;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* HealSound;
 };

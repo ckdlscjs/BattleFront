@@ -31,7 +31,8 @@ void ADroneAttackRange::BeginPlay()
 		//UGameplayStatics::ApplyDamage(DamagedActor, Damage, MyOwnerInstigator, this, DamageTypeClass);
 		for (auto Actor : OverlapActors)
 		{
-			UGameplayStatics::ApplyDamage(Actor, Damage, MyOwnerInstigator, this, DamageTypeClass);
+			//UGameplayStatics::ApplyDamage(Actor, Damage, MyOwnerInstigator, this, DamageTypeClass);
+			UGameplayStatics::ApplyDamage(Actor, Damage, nullptr, this, DamageTypeClass);
 		}
 	}
 	//Destroy();

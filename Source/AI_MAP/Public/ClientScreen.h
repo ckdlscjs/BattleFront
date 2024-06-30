@@ -30,4 +30,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (BindWidget))
 
 		class UTextBlock* SuccessText;
+public:
+	class UNetworkManager* GetNetworkManager() const;
 };

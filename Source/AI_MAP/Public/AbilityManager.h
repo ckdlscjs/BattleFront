@@ -14,6 +14,7 @@ class AI_MAP_API AAbilityManager : public AActor
 public:	
 	// Sets default values for this actor's properties
 	AAbilityManager();
+	virtual void BeginDestroy() override;
 	void Attack();
 	void SetRandomIndex();
 	void SetNewAbility();
@@ -27,12 +28,17 @@ public:
 	void DroneReturn();
 	bool CheckDistanceToDrone();
 	void ResetSelectedAbility();
+	void SetCharacterGuard();
 	FVector GetDronePointLocation();
 	void HealAbility();
+	void StopAbility();
+
+	void SetVisibility(bool visible);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	bool CheckAbilityLevel(TSubclassOf<class AAbilityBase> Base);
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override; 
@@ -46,16 +52,17 @@ private:
 		USceneComponent* DroneSpawnPoint;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Component", meta = (AllowPrivateAccess = "true"))
 		class USphereComponent* SphereComp;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* GuardSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		class UParticleSystemComponent* GuardParticle;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TArray<class UTexture2D*> RandTextureArray;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TArray<TSubclassOf<class AAbilityBase>> RandomAbilityArray;
 	UPROPERTY()
 		TSubclassOf<class AAbilityBase> SelectedAbility;
-	UPROPERTY()
-		TMap<class AAbilityBase*,int32> AbilityArray;
-	UPROPERTY()
-		TArray<TSubclassOf<class AAbilityBase>> RangeAbility;
+
 	UPROPERTY()
 		class AAbilityBase* DroneActor;
 	UPROPERTY()
@@ -70,15 +77,21 @@ private:
 		float DroneTimer;
 	UPROPERTY()
 		float LocalDeltaTime;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* DroneSpawnSound;
 public:
 	// Server
 	class UNetworkManager* GetNetworkManager() const;
-	void RecvMakeRange(class AGameCharacter* owner, int abilityIdx, FVector loc);
+	void RecvMakeBomb(class AGameCharacter* owner, int abilityIdx, FVector loc, float dmg);
+	void RecvMakeChemical(class AGameCharacter* owner, int abilityIdx, FVector loc, float dmg);
+	void RecvMakeGranade(class AGameCharacter* owner, int abilityIdx, FVector loc, FVector rand, float dmg);
 	void RecvMakeHeal(int abilityIdx);
 	void RecvUpdateHP(int hp);
 	
 	class AAbilityBase* GetDrone();
 	void RecvMakeDrone(int64 idx, AGameCharacter* owner);
-	void RecvSearchDrone(FVector loc);
+	void RecvSearchDrone(FVector loc, FRotator rot);
 	void RecvMoveDrone(FVector loc);
+	void RecvReturnDrone();
+	void RecvAttackDrone();
 };

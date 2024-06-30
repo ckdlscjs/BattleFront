@@ -20,8 +20,15 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	virtual void PostInitializeComponents() override;
+
+	virtual void BeginDestroy() override;
 	UFUNCTION(BlueprintImplementableEvent)
 	void GetItemAbility(AGameCharacter* gameCharacter, double value);
+
+	UFUNCTION(BlueprintCallable)
+	virtual void PlayAudioSystem(FString str);
+	UFUNCTION(BlueprintCallable)
+	virtual void PlayAudioSystemAtLocation(FString str, FVector Loc);
 
 protected:
 	// Called when the game starts or when spawned
@@ -54,5 +61,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float rotTime2Pi;
 	float rotTimeCur;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TMap<FString, class UAudioComponent*> AudioSystems;
 private:
 };

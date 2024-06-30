@@ -17,10 +17,12 @@ UTeam_AIGameInstance::UTeam_AIGameInstance()
 void UTeam_AIGameInstance::Init()
 {
 	Super::Init();
+	/*
 	if (CharcterDataTable->GetRowMap().Num() <= 0)
 		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("DataTableRow Not Exist!!!!!!")), true, true, FColor::Red);
 	else
 		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Attack : %f"), CharcterDataTable->FindRow<FTeam_CharacterData>(*FString::FromInt(20), TEXT(""))->Attack), true, true, FColor::Red);
+	*/
 }
 
 FTeam_CharacterData* UTeam_AIGameInstance::GetCharacterRowData(int32 Level)

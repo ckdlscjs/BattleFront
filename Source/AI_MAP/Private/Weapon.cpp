@@ -6,7 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "NetworkManager.h"
 #include "GameCharacter.h"
-
+#include "Particles/ParticleSystemComponent.h"
 // Sets default values
 AWeapon::AWeapon()
 {
@@ -16,12 +16,17 @@ AWeapon::AWeapon()
 	StaticMesh->SetupAttachment(RootComponent);
 	ProjectileSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Spawn Point"));
 	ProjectileSpawnPoint->SetupAttachment(StaticMesh);
+	EffectSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Effect Spawn Point"));
+	EffectSpawnPoint->SetupAttachment(StaticMesh);
+	BulletParticleSystemComponent = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particle Component"));
+	BulletParticleSystemComponent->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
+	BulletParticleSystemComponent->bAutoActivate = false;
 }
 
 // Called every frame
@@ -40,6 +45,12 @@ void AWeapon::Shot()
 {
 	FVector Location = ProjectileSpawnPoint->GetComponentLocation();
 	FRotator Rotation = ProjectileSpawnPoint->GetComponentRotation();
+	if (BulletParticleSystemComponent->Template)
+	{
+		BulletParticleSystemComponent->SetWorldLocation(EffectSpawnPoint->GetComponentLocation());
+		BulletParticleSystemComponent->SetWorldRotation(EffectSpawnPoint->GetComponentRotation());
+		BulletParticleSystemComponent->Activate(true);
+	}
 
 	AProjectile* Projectile = GetWorld()->SpawnActor<AProjectile>(ProjectileClass, Location, Rotation);
 	if (!Projectile)
@@ -67,6 +78,16 @@ void AWeapon::Shot()
 void AWeapon::SetVisibility(bool visible)
 {
 	StaticMesh->SetVisibility(visible);
+}
+
+void AWeapon::SetDepthStencil()
+{
+	StaticMesh->SetRenderCustomDepth(false);
+	auto player = Cast<AGameCharacter>(GetOwner());
+	if (!player)
+		return;
+	StaticMesh->CustomDepthStencilValue = player->GetController() ? 1 : 2;
+	StaticMesh->SetRenderCustomDepth(true);
 }
 
 UNetworkManager* AWeapon::GetNetworkManager() const

@@ -6,7 +6,11 @@
 #include "Components/CapsuleComponent.h" 
 #include "Kismet/KismetMathLibrary.h"
 #include "GrenadeFireArea.h"
+#include "Kismet/GameplayStatics.h"
 #include "AI_MAP.h"
+#include "Protocol.pb.h"
+#include "NetworkManager.h"
+#include "GameCharacter.h"	
 AAbilityGranade::AAbilityGranade()
 {
 
@@ -17,14 +21,12 @@ AAbilityGranade::AAbilityGranade()
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	StaticMesh->SetupAttachment(RootComponent);
 	MyAbilityLevel = 0;
-	Damage = (MyAbilityLevel + 6) * 2;
+	Damage = MyAbilityLevel + 6;
 	CoolTime = 7.f - MyAbilityLevel;
 	ProjectileCount = 1;
 	Type = AbilityType::Range;
 	CapsuleCompoent->SetGenerateOverlapEvents(false);
 
-	//ProjectileMovement->InitialSpeed = 1000.f;
-//	ProjectileMovement->MaxSpeed = 1500.f;
 }
 
 void AAbilityGranade::BeginPlay()
@@ -32,15 +34,15 @@ void AAbilityGranade::BeginPlay()
 	Super::BeginPlay();
 	CapsuleCompoent->OnComponentBeginOverlap.AddDynamic(this, &AAbilityGranade::ProjectileBeginOverlap);
 
-	int a = 0;
-	a = 10;
-
 }
 
 void AAbilityGranade::ProjectileBeginOverlap(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (GrenadeSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, GrenadeSound, GetActorLocation());
+	}
 	CapsuleCompoent->SetGenerateOverlapEvents(false);
-	UKismetSystemLibrary::PrintString(GetWorld(), FString(TEXT("Overlap!")));
 	FVector Loc = SweepResult.Location;
 	Loc.Z = 0;
 	if (HitParticles)
@@ -53,9 +55,6 @@ void AAbilityGranade::ProjectileBeginOverlap(UPrimitiveComponent* HitComp, AActo
 	auto MyOwner = GetOwner();
 	FireArea->SetOwner(MyOwner);
 	Destroy();
-	// spawn FireArea
-
-	// Destroy;
 }
 
 void AAbilityGranade::Tick(float DeltaTime)
@@ -64,7 +63,7 @@ void AAbilityGranade::Tick(float DeltaTime)
 	
 }
 
-void AAbilityGranade::SetLocation(FVector& Location)
+void AAbilityGranade::SetLocation(FVector& Location, int abilityIdx)
 {
 	FVector StartLocation = Location;
 	FVector TargetLocation = Location;
@@ -76,19 +75,47 @@ void AAbilityGranade::SetLocation(FVector& Location)
 	StartLocation.Z += 1500.f;
 	FVector RandVec = FMath::VRand();
 	RandVec.Z = 0;
-	CapsuleCompoent->SetGenerateOverlapEvents(true);
-
-	ProjectileMovement->AddForce(RandVec * 100000);
-	return;
+	SetForce(RandVec);
+	
+	//Server
+	Protocol::C_PLAYERSKILL_GRANADE granPkt;
+	{
+		auto player = Cast<AGameCharacter>(GetOwner());
+		granPkt.set_object_id(player->PlayerInfo->object_id());
+		granPkt.set_abilityarrayidx(abilityIdx);
+		granPkt.set_x(Location.X);
+		granPkt.set_y(Location.Y);
+		granPkt.set_z(Location.Z);
+		granPkt.set_rx(RandVec.X);
+		granPkt.set_ry(RandVec.Y);
+		granPkt.set_rz(RandVec.Z);
+		granPkt.set_dmg(this->GetAbilityDetail());
+	}
+	GetNetworkManager()->SendPacket(granPkt);
 }
 
 void AAbilityGranade::AbilityLevelUp()
 {
 	Super::AbilityLevelUp();
-	Damage = (MyAbilityLevel + 4) * 2;
+	Damage = MyAbilityLevel + 6;
 }
 
 int32 AAbilityGranade::GetProjCount()
 {
 	return ProjectileCount;
+}
+
+float AAbilityGranade::GetAbilityDetail()
+{
+	return Damage;
+}
+
+void AAbilityGranade::SetAbilityDetail(float Details)
+{
+	Damage = Details;
+}
+void AAbilityGranade::SetForce(FVector force)
+{
+	CapsuleCompoent->SetGenerateOverlapEvents(true);
+	ProjectileMovement->AddForce(force * 20000);
 }

@@ -34,4 +34,7 @@ protected:
 		class UButton* InputButton;
 	UPROPERTY()
 		bool bIsHost;
+
+public:
+	class UNetworkManager* GetNetworkManager() const;
 };

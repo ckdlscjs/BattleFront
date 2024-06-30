@@ -5,7 +5,7 @@
 #include "Team_AIController.h"
 #include "Team_AICharacterBase.h"
 #include "BehaviorTree/BlackboardComponent.h"
-
+#include "GameCharacter.h"
 void UBTService_Detect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
 	Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
@@ -22,6 +22,12 @@ void UBTService_Detect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
 	AActor* Target = Cast<AActor>(Blackboard->GetValueAsObject(ATeam_AIController::TargetKey));
 	if (IsValid(Target))
 	{
+		if (Cast<AGameCharacter>(Target)->IsDead())
+		{
+			Blackboard->SetValueAsObject(ATeam_AIController::TargetKey, nullptr);
+			AIController->SetState(ECharacterState::IDLE);
+			return;
+		}
 		AIController->SetState(ECharacterState::ATTACK);
 	}
 	else if(AICharacter->GetPatrolRoute())

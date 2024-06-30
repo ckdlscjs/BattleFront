@@ -36,6 +36,8 @@ public:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual void BeginDestroy() override;
+
 	UFUNCTION(BlueprintCallable)
 	float GetCurrentSpeed();
 
@@ -90,6 +92,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	virtual void AttackParticletoActors(FString str = "");
+
+	UFUNCTION(BlueprintCallable)
+	virtual void PlayAudioSystem(FString str);
+	UFUNCTION(BlueprintCallable)
+	virtual void PlayAudioSystemAtLocation(FString str, FVector Loc);
 protected:
 
 private:
@@ -188,6 +195,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UPaperSpriteComponent* PaperSprite;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TMap<FString, class UAudioComponent*> AudioSystems;
 private:
 
 
@@ -196,4 +205,5 @@ public:
 	Protocol::PosInfo pos;
 	class UNetworkManager* GetNetworkManager() const;
 	void SetCurHP(float hp);
+	void SetAttackTargetPlayers(TArray<AActor*>& temp);
 };

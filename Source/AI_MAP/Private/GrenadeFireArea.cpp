@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Engine/EngineTypes.h"
+#include "GameCharacter.h"
 // Sets default values
 AGrenadeFireArea::AGrenadeFireArea()
 {
@@ -27,6 +28,10 @@ void AGrenadeFireArea::BeginPlay()
 {
 	Super::BeginPlay();
 	GetWorldTimerManager().SetTimer(DamageTimerHandle, this, &AGrenadeFireArea::TakePlayerDamage, RateToTime, true);
+	if (FireSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
+	}
 }
 
 // Called every frame
@@ -48,16 +53,18 @@ void AGrenadeFireArea::SetFireDamage(float Amount)
 
 void AGrenadeFireArea::TakePlayerDamage()
 {
-	auto MyOwner = GetOwner();
+	AGameCharacter* MyOwner = Cast<AGameCharacter>(GetOwner());
 	SphereCollision->GetOverlappingActors(OverlapActors);
 	if (MyOwner != nullptr)
 	{
 		auto MyOwnerInstigator = MyOwner->GetInstigatorController();
 		auto DamageTypeClass = UDamageType::StaticClass();
+		
 		//UGameplayStatics::ApplyDamage(DamagedActor, Damage, MyOwnerInstigator, this, DamageTypeClass);
 		for (auto Actor : OverlapActors)
 		{
-			UGameplayStatics::ApplyDamage(Actor, Damage, MyOwnerInstigator, this, DamageTypeClass);
+			//UGameplayStatics::ApplyDamage(Actor, Damage, MyOwnerInstigator, MyOwner, DamageTypeClass);
+			UGameplayStatics::ApplyDamage(Actor, Damage, nullptr, MyOwner, DamageTypeClass);
 		}
 	}
 }

@@ -26,6 +26,7 @@ message ObjectInfo
 	uint64 object_id = 1;
 	ObjectType object_type = 2;
 	PosInfo pos_info = 3;
+	uint64 spawnIdx = 4;
 	// ...
 }
 

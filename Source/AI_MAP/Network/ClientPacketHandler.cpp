@@ -1,6 +1,7 @@
 #include "ClientPacketHandler.h"
 #include "BufferReader.h"
 #include "NetworkManager.h"
+#include "Team_AIGameMode.h"
 
 
 PacketHandlerFunc GPacketHandler[UINT16_MAX];
@@ -30,13 +31,45 @@ bool Handle_INVALID(PacketSessionRef& session, BYTE* buffer, int32 len)
 
 bool Handle_S_LOGIN(PacketSessionRef& session, Protocol::S_LOGIN& pkt)
 {
-	Protocol::C_ENTER_GAME EnterGamePkt;
+	UNetworkManager* GameNetwork = GetWorldNetwork(session);
+	GameNetwork->ClientID = pkt.client_id();
 
-	if (const UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	if (GameNetwork->ClientID == 1)
 	{
-		GameNetwork->SendPacket(EnterGamePkt);
+		Protocol::C_PLAYERSPAWNPOINT spawnPkt;
+		spawnPkt.set_spawnpointsize(GameNetwork->GameMode->GetPlayerSpawnPointSize());
+		GameNetwork->SendPacket(spawnPkt);
 	}
 
+	Protocol::C_PLAYERCOUNT countPkt;
+	GameNetwork->SendPacket(countPkt);
+
+	//캐릭터 생성을 호스트가 gamestart trigger 누르면 실행되게 하는 방향으로
+	//Protocol::C_ENTER_GAME EnterGamePkt;
+
+	//GameNetwork->SendPacket(EnterGamePkt);
+
+	return true;
+}
+
+bool Handle_S_PLAYERCOUNT(PacketSessionRef& session, Protocol::S_PLAYERCOUNT& pkt)
+{
+	UNetworkManager* GameNetwork = GetWorldNetwork(session);
+	GameNetwork->HandlePlayerCount(pkt);
+	return true;
+}
+
+bool Handle_S_GAMESTART(PacketSessionRef& session, Protocol::S_GAMESTART& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		Protocol::C_ENTER_GAME EnterGamePkt;
+		EnterGamePkt.set_client_id(GameNetwork->ClientID);
+		GameNetwork->SendPacket(EnterGamePkt);
+
+		GameNetwork->HandleRmvStartWidget(pkt);
+		GameNetwork->ChangeMainBGM(pkt);
+	}
 	return true;
 }
 
@@ -117,6 +150,25 @@ bool Handle_S_HIT(PacketSessionRef& session, Protocol::S_HIT& pkt)
 	return true;
 }
 
+bool Handle_S_EXPUP(PacketSessionRef& session, Protocol::S_EXPUP& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleExpUP(pkt);
+	}
+
+	return true;
+}
+
+bool Handle_S_LVUP(PacketSessionRef& session, Protocol::S_LVUP& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleLvUP(pkt);
+	}
+	return true;
+}
+
 bool Handle_S_AISPAWN_RANDOM(PacketSessionRef& session, Protocol::S_AISPAWN_RANDOM& pkt)
 {
 	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
@@ -174,6 +226,15 @@ bool Handle_S_AIATTACK(PacketSessionRef& session, Protocol::S_AIATTACK& pkt)
 	return true;
 }
 
+bool Handle_S_AIATTACK_BOSS2(PacketSessionRef& session, Protocol::S_AIATTACK_BOSS2& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleAIAttackBoss(pkt);
+	}
+	return true;
+}
+
 bool Handle_S_AIROTATE(PacketSessionRef& session, Protocol::S_AIROTATE& pkt)
 {
 	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
@@ -217,7 +278,7 @@ bool Handle_S_AIDEAD(PacketSessionRef& session, Protocol::S_AIDEAD& pkt)
 	{
 		GameNetwork->HandleAIDead(pkt);
 	}
-	
+
 	return true;
 }
 
@@ -248,13 +309,31 @@ bool Handle_S_AI_KNOCKS_BACK(PacketSessionRef& session, Protocol::S_AI_KNOCKS_BA
 	return true;
 }
 
-bool Handle_S_PLAYERSKILL_RANGE(PacketSessionRef& session, Protocol::S_PLAYERSKILL_RANGE& pkt)
+bool Handle_S_PLAYERSKILL_BOMB(PacketSessionRef& session, Protocol::S_PLAYERSKILL_BOMB& pkt)
 {
 	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
 	{
-		GameNetwork->HandleSkillRange(pkt);
+		GameNetwork->HandleSkillBomb(pkt);
 	}
 	return true;
+}
+
+bool Handle_S_PLAYERSKILL_GRANADE(PacketSessionRef& session, Protocol::S_PLAYERSKILL_GRANADE& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleSkillGranade(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_PLAYERSKILL_CHEMICAL(PacketSessionRef& session, Protocol::S_PLAYERSKILL_CHEMICAL& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleSkillChemical(pkt);
+	}
+	return false;
 }
 
 bool Handle_S_PLAYERSKILL_GUARD(PacketSessionRef& session, Protocol::S_PLAYERSKILL_GUARD& pkt)
@@ -317,6 +396,78 @@ bool Handle_S_RETURNDRONE(PacketSessionRef& session, Protocol::S_RETURNDRONE& pk
 	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
 	{
 		GameNetwork->HandleReturnDrone(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_ATTACKDRONE(PacketSessionRef& session, Protocol::S_ATTACKDRONE& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleAttackDrone(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_EATITEM_MAXHPUP(PacketSessionRef& session, Protocol::S_EATITEM_MAXHPUP& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleEatItemMaxHP(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_EATITEM_LVUP(PacketSessionRef& session, Protocol::S_EATITEM_LVUP& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleEatItemLVUP(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_EATITEM_DMGUP(PacketSessionRef& session, Protocol::S_EATITEM_DMGUP& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleEatItemDmgUP(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_EATITEM_HEALHP(PacketSessionRef& session, Protocol::S_EATITEM_HEALHP& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleEatItemHealUp(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_SET_MAGNETICFIELD(PacketSessionRef& session, Protocol::S_SET_MAGNETICFIELD& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleSetMagneticField(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_WORLD_LVUP(PacketSessionRef& session, Protocol::S_WORLD_LVUP& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleSetWorldLV(pkt);
+	}
+	return true;
+}
+
+bool Handle_S_GAMERESULT(PacketSessionRef& session, Protocol::S_GAMERESULT& pkt)
+{
+	if (UNetworkManager* GameNetwork = GetWorldNetwork(session))
+	{
+		GameNetwork->HandleGameResult(pkt);
 	}
 	return true;
 }

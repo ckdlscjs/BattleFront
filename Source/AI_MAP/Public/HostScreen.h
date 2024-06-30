@@ -25,4 +25,6 @@ protected:
 		class UTextBlock* PlayerNum; //player count
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (BindWidget))
 		class UButton* GameStartButton;
+public:
+	class UNetworkManager* GetNetworkManager() const;
 };

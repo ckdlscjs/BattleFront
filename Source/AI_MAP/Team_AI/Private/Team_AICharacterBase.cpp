@@ -22,6 +22,7 @@
 #include "DamageTextActor.h"
 #include "HealthBar.h"
 #include "Components/WidgetComponent.h"
+#include "Components/AudioComponent.h"
 // Sets default values
 ATeam_AICharacterBase::ATeam_AICharacterBase()
 {
@@ -61,10 +62,12 @@ ATeam_AICharacterBase::ATeam_AICharacterBase()
 	DamageTextPoint->SetupAttachment(RootComponent);
 	HealthBarWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
 	HealthBarWidget->SetupAttachment(RootComponent);
-
 	PaperSprite->SetRelativeLocation({ 0, 0, 2000 });
 	PaperSprite->SetRelativeRotation({0, 90, -90});
 	PaperSprite->SetRelativeScale3D({ 10, 10, 10});
+	GetMesh()->bRenderCustomDepth = true;
+	GetMesh()->CustomDepthStencilValue = 2;
+	GetMesh()->CustomDepthStencilWriteMask = ERendererStencilMask::ERSM_255;
 }
 
 // Called when the game starts or when spawned
@@ -78,6 +81,8 @@ void ATeam_AICharacterBase::BeginPlay()
 	}
 	for (const auto& iter : K2_GetComponentsByClass(UParticleSystemComponent::StaticClass()))
 		ParticleSystems.Add(TTuple<FString, UParticleSystemComponent*>(iter->GetName(), Cast<UParticleSystemComponent>(iter)));
+	for (const auto& iter : K2_GetComponentsByClass(UAudioComponent::StaticClass()))
+		AudioSystems.Add(TTuple<FString, UAudioComponent*>(iter->GetName(), Cast<UAudioComponent>(iter)));
 	BehviorSpawn();
 	//TODO : GetGameLevel
 	SetStat(Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()))->GetGameLevel());
@@ -86,23 +91,29 @@ void ATeam_AICharacterBase::BeginPlay()
 	if (!AIController)
 		return;
 	AIController->SetState(ECharacterState::IDLE);
-	
+}
 
+void ATeam_AICharacterBase::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (GetWorld())
+		GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
 }
 
 void ATeam_AICharacterBase::TakenDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
 {
 	if (HitOverlayMaterial)
 		GetMesh()->SetOverlayMaterial(HitOverlayMaterial);
-
+	PlayAudioSystemAtLocation(TEXT("Hit"), GetActorLocation());
 	
 	GetWorldTimerManager().SetTimer
 	(
 		DamageOverlayHandle,
 		[this]() -> void
 		{
+			if (!IsValid(this))
+				return;
 			GetMesh()->SetOverlayMaterial(nullptr);
-			GetWorldTimerManager().ClearTimer(DamageOverlayHandle);
 		},
 		HitOverlayTime,
 		false
@@ -110,7 +121,7 @@ void ATeam_AICharacterBase::TakenDamage(AActor* DamagedActor, float Damage, cons
 
 	if (GetNetworkManager()->GameMode->GetMyPlayer()->PlayerInfo->object_id() == 1)
 	{
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("TakenDamage:%f"), Damage));
+		//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("TakenDamage:%f"), Damage));
 		CurHp -= Damage;
 
 		
@@ -123,6 +134,7 @@ void ATeam_AICharacterBase::TakenDamage(AActor* DamagedActor, float Damage, cons
 		}
 		if (CurHp <= 0.0f && !AnimInstance->GetDead())
 		{
+			auto player = Cast<AGameCharacter>(DamageCauser);
 			Protocol::C_AIDEAD AIDeadPkt;
 			{
 				AIDeadPkt.set_object_id(pos.object_id());
@@ -131,6 +143,7 @@ void ATeam_AICharacterBase::TakenDamage(AActor* DamagedActor, float Damage, cons
 			}
 			//Send DropExp Packet to DamageCauser
 			//SendTest("Dead");
+			player->ExpUp(DropExp);
 			BehaviorDead();
 		}
 	}
@@ -145,7 +158,7 @@ void ATeam_AICharacterBase::SetStat(int32 CharacterLevel)
 		return;
 	FTeam_CharacterData* RowData = GameInstance->GetCharacterRowData(CharacterLevel);
 	//TODO : SetRowData
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("CharacterLevel : %d"), RowData->Level));
+	//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("CharacterLevel : %d"), RowData->Level));
 	Level = RowData->Level;
 	MaxHP = RowData->MaxHP * EnemyStatDecreaseAmount;
 	CurHp = MaxHP;
@@ -154,6 +167,10 @@ void ATeam_AICharacterBase::SetStat(int32 CharacterLevel)
 	Armor = RowData->Armor * EnemyStatDecreaseAmount;
 	Speed = RowData->Speed * EnemyStatDecreaseAmount;
 	DropExp = RowData->DropExp;
+	if (HealthBar != nullptr)
+	{
+		HealthBar->SetLevelText(Level);
+	}
 }
 
 void ATeam_AICharacterBase::CreateDamageWidget(float DamageAmount)
@@ -207,13 +224,17 @@ void ATeam_AICharacterBase::PostInitializeComponents()
 	*/
 	AnimInstance->OnDead.AddLambda([this]() -> void
 		{
-			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("LambdaDead!!!!!!!!!!!!!!!!!!!!!")));
+			if (!IsValid(this))
+				return;
+			//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("LambdaDead!!!!!!!!!!!!!!!!!!!!!")));
 			auto gm = Cast<ATeam_AIGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 			gm->SetAIDespawn(pos.object_id());
 			Destroy();
 		});
 	AnimInstance->OnAttackMontageEnd.AddLambda([this]() -> void
 		{
+			if (!IsValid(this))
+				return;
 			ATeam_AIController* AIController = Cast<ATeam_AIController>(GetController());
 			if (!AIController)
 				return;
@@ -290,7 +311,7 @@ void ATeam_AICharacterBase::BehviorSpawn()
 
 void ATeam_AICharacterBase::OnDeadMontageEnd(UAnimMontage* Montage, bool bInterrupted)
 {
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("LambdaDead!!!!!!!!!!!!!!!!!!!!!")));
+	//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("LambdaDead!!!!!!!!!!!!!!!!!!!!!")));
 	Destroy();
 }
 
@@ -324,7 +345,7 @@ void ATeam_AICharacterBase::IncrementPatrolIndex()
 		PatrolIndex = 0;
 		PatrolDirection = 1;
 	}
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("%d"), PatrolIndex));
+	//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("%d"), PatrolIndex));
 }
 
 void ATeam_AICharacterBase::SetCurrentState(ECharacterState State)
@@ -426,11 +447,41 @@ void ATeam_AICharacterBase::AttackParticletoActors(FString str)
 {
 	for (const auto& actor : Players)
 	{
-		UGameplayStatics::ApplyDamage(actor, Attack, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
+		auto owner = GetOwner();
+		if (owner != nullptr)
+		{
+			//UGameplayStatics::ApplyDamage(actor, Attack, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
+			UGameplayStatics::ApplyDamage(actor, Attack, nullptr, this, UDamageType::StaticClass());
+		}
 		if (!str.IsEmpty() && ParticleSystems[str]->Template)
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystems[str]->Template, actor->GetActorLocation(), ParticleSystems[str]->GetRelativeRotation(), ParticleSystems[str]->GetRelativeScale3D());
 	}
 }
+
+void ATeam_AICharacterBase::PlayAudioSystem(FString str)
+{
+	if (!AudioSystems.Find(str))
+		return;
+	UAudioComponent* AudioComponent = AudioSystems[str];
+	if (!AudioComponent)
+		return;
+	if (!AudioComponent->Sound)
+		return;
+	AudioComponent->Play();
+}
+
+void ATeam_AICharacterBase::PlayAudioSystemAtLocation(FString str, FVector Loc)
+{
+	if (!AudioSystems.Find(str))
+		return;
+	UAudioComponent* AudioComponent = AudioSystems[str];
+	if (!AudioComponent)
+		return;
+	if (!AudioComponent->Sound)
+		return;
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), AudioComponent->Sound, Loc);
+}
+
 
 
 float ATeam_AICharacterBase::GetDetectRadius()
@@ -471,4 +522,11 @@ UNetworkManager* ATeam_AICharacterBase::GetNetworkManager() const
 void ATeam_AICharacterBase::SetCurHP(float hp)
 {
 	CurHp = hp;
+	SetHealthBarPercent(MaxHP, CurHp);
+}
+
+void ATeam_AICharacterBase::SetAttackTargetPlayers(TArray<AActor*>& temp)
+{
+	Players.Empty();
+	Players = temp;
 }

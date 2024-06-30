@@ -25,9 +25,11 @@ public:
 	virtual float GetAbilityDetail() override;
 	virtual void ChargeGuardPoint() override;
 	virtual void AbilityLevelUp() override;
+	virtual void SetAbilityDetail(float Details) override;
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", meta = (AllowPrivateAccess = "true"))
 		float GuardPoint;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", meta = (AllowPrivateAccess = "true"))
 		float AbilityPoint;
+
 };

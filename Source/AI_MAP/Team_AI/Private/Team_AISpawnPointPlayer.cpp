@@ -27,7 +27,7 @@ AGameCharacter* ATeam_AISpawnPointPlayer::SpawnActor()
 	//send to packet server
 	if (!IsValid(spawnActor))
 	{
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("NotActorSpawn")));
+		//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("NotActorSpawn")));
 		return nullptr;
 	}
 	return spawnActor;

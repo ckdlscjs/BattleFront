@@ -7,6 +7,7 @@
 #include "Particles/ParticleSystemComponent.h"
 #include "Materials/MaterialInstance.h"
 #include "Components/PrimitiveComponent.h"
+#include "Components/AudioComponent.h"
 // Sets default values
 ATeam_AIItemBase::ATeam_AIItemBase()
 {
@@ -33,7 +34,8 @@ void ATeam_AIItemBase::BeginPlay()
 	ParticleSystem->bAutoActivate = false;
 	MaterialDynamicInst = StaticMesh->CreateDynamicMaterialInstance(0, StaticMesh->GetMaterial(0));
 	MaterialDynamicInst->SetScalarParameterValue(FName("GlowValue"), 300.0f);
-
+	for (const auto& iter : K2_GetComponentsByClass(UAudioComponent::StaticClass()))
+		AudioSystems.Add(TTuple<FString, UAudioComponent*>(iter->GetName(), Cast<UAudioComponent>(iter)));
 }
 
 void ATeam_AIItemBase::ItemBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -43,13 +45,17 @@ void ATeam_AIItemBase::ItemBeginOverlap(UPrimitiveComponent* OverlappedComponent
 		return;
 	if(ParticleSystem->Template)
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ParticleSystem->Template, player->GetActorLocation());
+	PlayAudioSystemAtLocation(TEXT("GetItem"), GetActorLocation());
 	//Clinet Only
 	GetItemAbility(player, ItemAbilityInfo);
+	BoxCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GetWorldTimerManager().SetTimer
 	(
 		ItemTimerHandle,
 		[this]() -> void
 		{
+			if (!IsValid(this))
+				return;
 			float ratio = 1.0f - (DissolveTimeCurrent / MeshDissolveTime);
 			//material translucen
 			MaterialDynamicInst->SetScalarParameterValue(FName("Ratio_Dissolve"), ratio);
@@ -58,7 +64,7 @@ void ATeam_AIItemBase::ItemBeginOverlap(UPrimitiveComponent* OverlappedComponent
 			DissolveTimeCurrent += GetWorld()->GetDeltaSeconds();
 			if (DissolveTimeCurrent > MeshDissolveTime)
 			{
-				GetWorldTimerManager().ClearTimer(ItemTimerHandle);
+				GetWorldTimerManager().PauseTimer(ItemTimerHandle);
 				Destroy();
 			}
 		},
@@ -84,5 +90,36 @@ void ATeam_AIItemBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 	BoxCollision->OnComponentBeginOverlap.AddDynamic(this, &ATeam_AIItemBase::ItemBeginOverlap);
+}
+
+void ATeam_AIItemBase::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (GetWorld())
+		GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+}
+
+void ATeam_AIItemBase::PlayAudioSystem(FString str)
+{
+	if (!AudioSystems.Find(str))
+		return;
+	UAudioComponent* AudioComponent = AudioSystems[str];
+	if (!AudioComponent)
+		return;
+	if (!AudioComponent->Sound)
+		return;
+	AudioComponent->Play();
+}
+
+void ATeam_AIItemBase::PlayAudioSystemAtLocation(FString str, FVector Loc)
+{
+	if (!AudioSystems.Find(str))
+		return;
+	UAudioComponent* AudioComponent = AudioSystems[str];
+	if (!AudioComponent)
+		return;
+	if (!AudioComponent->Sound)
+		return;
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), AudioComponent->Sound, Loc);
 }
 

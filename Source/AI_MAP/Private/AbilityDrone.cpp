@@ -40,6 +40,7 @@ void AAbilityDrone::BeginPlay()
 {
 	Super::BeginPlay();
 	DroneParticleSystemComponent->bAutoActivate = false;
+
 }
 
 void AAbilityDrone::Tick(float DeltaTime)
@@ -59,7 +60,7 @@ void AAbilityDrone::Tick(float DeltaTime)
 	}
 }
 
-void AAbilityDrone::SetLocation(FVector& Location)
+void AAbilityDrone::SetLocation(FVector& Location, int abilityIdx)
 {
 	StartLocation = GetActorLocation();
 	float X_Min = Location.X - 500.f;
@@ -97,11 +98,6 @@ void AAbilityDrone::SetDroneStateReturn()
 	State = DroneState::Return;
 }
 
-void AAbilityDrone::ReturnDrone(FVector& Location)
-{
-
-}
-
 void AAbilityDrone::SetDroneNoneState()
 {
 	State = DroneState::None;
@@ -122,27 +118,69 @@ void AAbilityDrone::SetDroneRotation()
 	target.Z = start.Z;
 	FRotator Rot = UKismetMathLibrary::FindLookAtRotation(start, target);
 	SetActorRotation(test);
+	if (DroneMoveSound)
+	{
+		PlaySound(DroneMoveSound);
+	}
 }
+
+float AAbilityDrone::GetAbilityDetail()
+{
+	return Damage;
+}
+
+void AAbilityDrone::SetAbilityDetail(float Details)
+{
+	Damage = Details;
+}
+
+void AAbilityDrone::PlaySound(USoundBase* Sound)
+{
+	UGameplayStatics::PlaySoundAtLocation(this, Sound, GetActorLocation());
+}
+
+void AAbilityDrone::PlayDroneMoveSound()
+{
+	PlaySound(DroneMoveSound);
+}
+
+void AAbilityDrone::PlayDroneAttackSound()
+{
+	PlaySound(DroneAttackSound);
+}
+
 
 void AAbilityDrone::Attack()
 {
 	FVector Loc = GetActorLocation();
-	Loc.Z = 0.f;
+	Loc.Z = 0.f; 
 	if (DroneParticleSystemComponent->Template)
 	{
 		DroneParticleSystemComponent->SetWorldLocation(Loc);
 		DroneParticleSystemComponent->Activate(true);
 	}
-		
-	UGameplayStatics::ApplyRadialDamage(GetWorld(), Damage, Loc, 200.f, nullptr, TArray<AActor*>(), this, false, true);
+	if (DroneAttackSound)
+	{
+		PlaySound(DroneAttackSound);
+	}
+
+	AGameCharacter* MyOwner = Cast<AGameCharacter>(GetOwner());
+	UGameplayStatics::ApplyRadialDamage(GetWorld(), Damage, Loc, 400.f, nullptr, TArray<AActor*>(), MyOwner, false, true);
+
+	Protocol::C_ATTACKDRONE atkDrnPkt;
+	{
+		AGameCharacter* owner = Cast<AGameCharacter>(GetOwner());
+		if (owner == nullptr)
+			return;
+		atkDrnPkt.set_object_id(owner->PlayerInfo->object_id());
+	}
+	GetNetworkManager()->SendPacket(atkDrnPkt);
 }
 
 bool AAbilityDrone::MoveToTarget()
 {
 	if (TargetDistance > CurrentDistance)
-	{
-	
-		
+	{	
 		FVector CurrentLocation = GetActorLocation();
 		CurrentLocation += Direction * Speed * MY_DeltaTime;
 		SetActorLocation(CurrentLocation);
@@ -165,6 +203,7 @@ bool AAbilityDrone::MoveToTarget()
 	}
 	else
 	{
+	
 		if (State != DroneState::Return)
 		{
 			State = DroneState::Attack;
@@ -185,4 +224,29 @@ void AAbilityDrone::ChangeAttackStatus(bool bChange)
 bool AAbilityDrone::GetAttackState()
 {
 	return bAttack;
+}
+
+void AAbilityDrone::SetDepthStencil()
+{
+	StaticMesh->SetRenderCustomDepth(false);
+	auto player = Cast<AGameCharacter>(GetOwner());
+	if (!player)
+		return;
+	StaticMesh->CustomDepthStencilValue = player->GetController() ? 1 : 2;
+	StaticMesh->SetRenderCustomDepth(true);
+}
+
+void AAbilityDrone::SetVisibility(bool visible)
+{
+	StaticMesh->SetVisibility(visible);
+}
+void AAbilityDrone::ActivateAttakPaticle()
+{
+	FVector Loc = GetActorLocation();
+	Loc.Z = 0.f;
+	if (DroneParticleSystemComponent->Template)
+	{
+		DroneParticleSystemComponent->SetWorldLocation(Loc);
+		DroneParticleSystemComponent->Activate(true);
+	}
 }

@@ -29,7 +29,9 @@ void ATeam_AICharacter_Melee::PostInitializeComponents()
 		return;
 	AnimInstance->OnAttackStart.AddLambda([this]() -> void
 		{
-			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("LambdaAttack!")));
+			if (!IsValid(this))
+				return;
+			//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("LambdaAttack!")));
 			AttackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 
 			//Protocol::C_AIATTACK aiAttackPkt;
@@ -40,11 +42,16 @@ void ATeam_AICharacter_Melee::PostInitializeComponents()
 		});
 	AnimInstance->OnAttackEnd.AddLambda([this]() -> void
 		{
-			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("AttackEnd!")));
+			if (!IsValid(this))
+				return;
+			//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("AttackEnd!")));
 			AttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		});
 	AnimInstance->OnAttackParticle.AddLambda([this]() -> void
 		{
+			if (!IsValid(this))
+				return;
+			PlayAudioSystemAtLocation(TEXT("Slash"), GetActorLocation());
 			ActivateParticleSystem(TEXT("Melee"));
 		});
 }
@@ -54,7 +61,7 @@ void ATeam_AICharacter_Melee::AttackCollisionOverlap(UPrimitiveComponent* Overla
 	//TODO:BeginOverlap
 	/*if (AttackParticleSystem->Template)
 		AttackParticleSystem->Activate(true);*/
-	UGameplayStatics::ApplyDamage(OtherActor, Attack, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
+	UGameplayStatics::ApplyDamage(OtherActor, Attack, nullptr, this, UDamageType::StaticClass());
 	//TODO : Make Hit Packet
 	// need object_id
 	Protocol::C_AIHIT aiHitPkt;

@@ -54,7 +54,7 @@ void ATeam_AIBuildingBase::Tick(float DeltaTime)
 
 void ATeam_AIBuildingBase::ActorBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("BuildingOverlap!!")), true, false, FColor::Black);
+	//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("BuildingOverlap!!")), true, false, FColor::Black);
 	//Roof->SetVisibility(false);
 	for (const auto& iter : Roofs)
 	{

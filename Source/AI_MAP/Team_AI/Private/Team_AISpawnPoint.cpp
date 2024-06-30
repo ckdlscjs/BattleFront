@@ -48,7 +48,7 @@ ATeam_AICharacterBase* ATeam_AISpawnPoint::SpawnActor()
 	//send to packet server
 	if (!IsValid(spawnActor))
 	{
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("NotActorSpawn")));
+		//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("NotActorSpawn")));
 		return nullptr;
 	}
 	spawnActor->pos.set_object_id(AIID++);
@@ -66,7 +66,7 @@ ATeam_AICharacter_Recv* ATeam_AISpawnPoint::RecvedSpawnActor()
 	SpawnPointDestruction();
 	if (!IsValid(spawnActor))
 	{
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("NotRecvedActorSpawn")));
+		//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("NotRecvedActorSpawn")));
 		return nullptr;
 	}
 	return spawnActor;

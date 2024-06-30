@@ -52,13 +52,19 @@ public:
 	virtual class UTexture2D* GetTexture();
 	virtual void SetAbilityLevel(int32 Level);
 	virtual int32 GetAbilityLevel();
+	virtual void PlaySound(USoundBase* Sound) { return;  };
+	virtual void PlayDroneMoveSound() { return; };
+	virtual void PlayDroneAttackSound() { return; };
+	virtual void PlayDroneSpawnSound() { return; };
+	virtual void PlayChemicalSound() { return; };
 	virtual FString GetAbilityName();
 	virtual void AbilityLevelUp();
-	virtual void SetLocation(FVector& Location) { return ; };
+	virtual void SetLocation(FVector& Location, int abilityIdx = 0) { return; };
 	virtual void HealCharacterHp(float& HealthPoint, float MaxPoint) { return; };
 	virtual void ReturnToTarget(FVector& Location) { return; };
 	virtual void ChargeGuardPoint() { return; };
 	virtual float GetAbilityDetail() { return 0.f; };
+	virtual void SetAbilityDetail(float Details) { return; };
 	virtual bool GetAttachedState() { return bAttachedState; };
 	virtual bool MoveToTarget() { return false; };
 	virtual void ReturnDrone(FVector& Location) { return; };
@@ -67,6 +73,9 @@ public:
 	virtual DroneState GetDroneState() { return DroneState::None; };
 	virtual void SetDroneStateReturn() { return; };
 	virtual void SetDroneRotation() { return; };
+	virtual void SetDepthStencil() { return; };
+	
+	virtual void SetVisibility(bool visible) { return; };
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		class UCapsuleComponent* CapsuleCompoent;

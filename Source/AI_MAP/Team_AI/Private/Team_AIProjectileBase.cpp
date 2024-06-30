@@ -13,7 +13,7 @@
 ATeam_AIProjectileBase::ATeam_AIProjectileBase()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	SphereCollision = CreateDefaultSubobject<USphereComponent>(TEXT("SphereCollision"));
 	RootComponent = SphereCollision;
@@ -29,6 +29,21 @@ void ATeam_AIProjectileBase::BeginPlay()
 	SetCollisionEnable(false);
 
 	//SphereCollision->OnComponentHit.AddDynamic(this, &ATeam_AIProjectileBase::OnHit);
+	/*GetWorld()->GetTimerManager().SetTimer
+	(
+		LifeTimeHandle,
+		[this]() -> void
+		{
+			if (!IsValid(this))
+				return;
+			LifeTime -= 0.1f;
+			if (LifeTime < 0.0f)
+				Destroy();
+		},
+		0.1f,
+		true,
+		0.0f
+	);*/
 }
 
 void ATeam_AIProjectileBase::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -38,7 +53,7 @@ void ATeam_AIProjectileBase::OnBeginOverlap(UPrimitiveComponent* OverlappedCompo
 	if (gm->GetMyPlayer()->PlayerInfo->object_id() == 1)
 	{
 		//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("ProjectileBeginOverlap!!, %f"), Damage), true, false, FColor::Green);
-		UGameplayStatics::ApplyDamage(OtherActor, Damage, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
+		UGameplayStatics::ApplyDamage(OtherActor, Damage, nullptr, this, UDamageType::StaticClass());
 	}
 	Destroy();
 }
@@ -46,7 +61,8 @@ void ATeam_AIProjectileBase::OnBeginOverlap(UPrimitiveComponent* OverlappedCompo
 void ATeam_AIProjectileBase::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("ProjectileHit!!, %f"), Damage), true, false, FColor::Green);
-	UGameplayStatics::ApplyDamage(OtherActor, Damage, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
+	UGameplayStatics::
+	Damage(OtherActor, Damage, GetOwner()->GetInstigatorController(), this, UDamageType::StaticClass());
 	Destroy();
 }
 */
@@ -54,7 +70,9 @@ void ATeam_AIProjectileBase::OnHit(UPrimitiveComponent* HitComponent, AActor* Ot
 void ATeam_AIProjectileBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	LifeTime -= DeltaTime;
+	if (LifeTime < 0.0f)
+		Destroy();
 }
 
 void ATeam_AIProjectileBase::ProjectileInitialize(float AttackDamage, float SpeedInit, float SpeedMax, float Gravity)
@@ -69,27 +87,17 @@ void ATeam_AIProjectileBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 	SphereCollision->OnComponentBeginOverlap.AddDynamic(this, &ATeam_AIProjectileBase::OnBeginOverlap);
-
-	GetWorld()->GetTimerManager().SetTimer
-	(
-		LifeTimeHandle,
-		[this]() -> void
-		{
-			LifeTime -= 0.1f;
-			if (LifeTime < 0.0f)
-			{
-				GetWorld()->GetTimerManager().ClearTimer(LifeTimeHandle);
-				Destroy();
-			}
-		},
-		0.1f,
-		true,
-		0.0f
-	);
 }
 
 void ATeam_AIProjectileBase::SetCollisionEnable(bool bCollide)
 {
 	SphereCollision->SetCollisionEnabled(bCollide ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+}
+
+void ATeam_AIProjectileBase::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (GetWorld())
+		GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
 }
 

@@ -35,4 +35,13 @@ protected:
 		TSubclassOf<UUserWidget> HostWidget;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 		TSubclassOf<UUserWidget> ClientWidget;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	class UHostScreen* HostScreen;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	class UClientScreen* ClientScreen;
+
+public:
+	class UHostScreen* GetHostScreen();
+	class UClientScreen* GetClientScreen();
+	class UNetworkManager* GetNetworkManager() const;
 };

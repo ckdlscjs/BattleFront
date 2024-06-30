@@ -3,8 +3,10 @@
 
 #include "AbilityProtected.h"
 
+
 AAbilityProtected::AAbilityProtected()
 {
+
 	MyAbilityLevel = 0;
 	AbilityPoint = 10.f;
 	GuardPoint = ((MyAbilityLevel + 1) * 5) + AbilityPoint;
@@ -15,6 +17,7 @@ AAbilityProtected::AAbilityProtected()
 void AAbilityProtected::BeginPlay()
 {
 	Super::BeginPlay();
+
 }
 
 void AAbilityProtected::Tick(float DeltaTime)
@@ -30,7 +33,9 @@ float AAbilityProtected::GetAbilityDetail()
 
 void AAbilityProtected::ChargeGuardPoint()
 {
+
 	GuardPoint = ((MyAbilityLevel + 1) * 5) + AbilityPoint;
+
 }
 
 void AAbilityProtected::AbilityLevelUp()
@@ -39,4 +44,9 @@ void AAbilityProtected::AbilityLevelUp()
 	AbilityPoint++;;
 	GuardPoint = ((MyAbilityLevel + 1) * 5) + AbilityPoint;
 	CoolTime -= 3;
+}
+
+void AAbilityProtected::SetAbilityDetail(float Details)
+{
+	GuardPoint = Details;
 }

@@ -33,9 +33,10 @@ void ATeam_AIBushCollision::BeginPlay()
 
 void ATeam_AIBushCollision::BushBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	Players.Add(OtherActor);
-	if(!PlayerInBush)
-		PlayerInBush = Cast<AGameCharacter>(OtherActor)->GetController() == UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	auto overlapActor = Cast<AGameCharacter>(OtherActor);
+	Players.Add(overlapActor);
+	if (Cast<ACharacterController>(overlapActor->GetController()) == Cast<ACharacterController>(GetWorld()->GetFirstPlayerController()))
+		PlayerInBush = true;
 	for (const auto& iter : Players)
 	{
 		Cast<AGameCharacter>(iter)->SetVisibility(PlayerInBush);
@@ -44,9 +45,11 @@ void ATeam_AIBushCollision::BushBeginOverlap(UPrimitiveComponent* OverlappedComp
 
 void ATeam_AIBushCollision::BushEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	Players.Remove(OtherActor);
-	if(PlayerInBush)
-		PlayerInBush = !(Cast<AGameCharacter>(OtherActor)->GetController() == UGameplayStatics::GetPlayerController(GetWorld(), 0));
+	auto overlapActor = Cast<AGameCharacter>(OtherActor);
+	Players.Remove(overlapActor);
+	overlapActor->SetVisibility(true);
+	if (Cast<ACharacterController>(overlapActor->GetController()) == Cast<ACharacterController>(GetWorld()->GetFirstPlayerController()))
+		PlayerInBush = false;
 	for (const auto& iter : Players)
 	{
 		Cast<AGameCharacter>(iter)->SetVisibility(PlayerInBush);

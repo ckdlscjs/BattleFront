@@ -2,6 +2,7 @@
 
 
 #include "AbilityHeal.h"
+#include "Kismet/GameplayStatics.h"
 
 AAbilityHeal::AAbilityHeal()
 {
@@ -28,6 +29,10 @@ void AAbilityHeal::HealCharacterHp(float& HealthPoint, float MaxPoint)
 	{
 		HealthPoint = MaxPoint;
 	}
+	if (HealSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, HealSound, GetActorLocation());
+	}
 }
 
 void AAbilityHeal::AbilityLevelUp()
@@ -35,4 +40,14 @@ void AAbilityHeal::AbilityLevelUp()
 	Super::AbilityLevelUp();
 	HealAmount++;
 	CoolTime--;
+}
+
+float AAbilityHeal::GetAbilityDetail()
+{
+	return HealAmount;
+}
+
+void AAbilityHeal::SetAbilityDetail(float Details)
+{
+	HealAmount = Details;
 }

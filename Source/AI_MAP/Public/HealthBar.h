@@ -17,6 +17,7 @@ public:
 	void SetPercentage(float MaxHp, float CurrHp);
 	void SetGuardPercent(float MaxGuard, float CurrGurad);
 	void SetColorHpBar();
+	void SetLevelText(int32 Level);
 protected:
 	virtual void NativeConstruct() override;
 protected:
@@ -24,6 +25,8 @@ protected:
 		class UProgressBar* HealthBar;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (BindWidget))
 		class UProgressBar* GuardBar;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (BindWidget))
+		class UTextBlock* LevelText;
 	UPROPERTY()
 		class UCanvasPanelSlot* PanelSlot;
 };

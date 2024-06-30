@@ -7,7 +7,7 @@
 #include "AbilityGranade.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class AI_MAP_API AAbilityGranade : public AAbilityBase
@@ -20,13 +20,18 @@ protected:
 public:
 	AAbilityGranade();
 	virtual void Tick(float DeltaTime) override;
-	virtual void SetLocation(FVector& Location) override;
 	virtual void AbilityLevelUp() override;
 	virtual int32 GetProjCount() override;
+	virtual float GetAbilityDetail() override;
+	virtual void SetAbilityDetail(float Details) override;
+	virtual void SetLocation(FVector& Location, int abilityIdx) override;
 private:
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FireArea", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<class AGrenadeFireArea> FireAreaClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Component" , meta = (AllowPrivateAccess = "true"))
 		class UParticleSystem* HitParticles;
+	UPROPERTY(EditAnywhere, Category = "Sound", meta = (AllowPrivateAccess = "true"))
+		class USoundBase* GrenadeSound;
+public:
+	void SetForce(FVector force);
 };

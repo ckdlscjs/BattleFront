@@ -25,6 +25,7 @@ class AI_MAP_API UTeam_AIAnimInstance_Boss : public UTeam_AIAnimInstance
 	GENERATED_BODY()
 public:
 	UTeam_AIAnimInstance_Boss();
+	virtual void BeginDestroy() override;
 protected:
 
 private:
@@ -43,6 +44,8 @@ private:
 	UFUNCTION()
 	void AnimNotify_Attack3EndCheck();
 
+	UFUNCTION()
+	void AnimNotify_Attack4SoundStart();
 	UFUNCTION()
 	void AnimNotify_Attack4StartCheck();
 	UFUNCTION()

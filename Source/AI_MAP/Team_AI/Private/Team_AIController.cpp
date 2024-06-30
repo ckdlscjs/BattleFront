@@ -13,6 +13,7 @@
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISenseConfig_Damage.h"
+#include "GameCharacter.h"
 
 const FName ATeam_AIController::SpawnPosKey(TEXT("SpawnPos"));
 const FName ATeam_AIController::PatrolPosKey(TEXT("PatrolPos"));
@@ -155,8 +156,8 @@ void ATeam_AIController::OnTargetDetect()
 					//UKismetSystemLibrary::PrintString(GetWorld(), FString(iter.GetActor()->GetActorNameOrLabel()), true, false);
 					Blackboard->SetValueAsObject(ATeam_AIController::TargetKey, nullptr);
 					Blackboard->SetValueAsEnum(ATeam_AIController::StateKey, (uint8)ECharacterState::IDLE);
-					DrawDebugLine(GetWorld(), AICharacter->GetActorLocation(), iter.GetActor()->GetActorLocation(), FColor::Red, false, 0.3f);
-					DrawDebugSphere(GetWorld(), AICharacter->GetActorLocation(), AICharacter->GetDetectRadius(), 16, FColor::Blue, false, 1.0f);
+					//DrawDebugLine(GetWorld(), AICharacter->GetActorLocation(), iter.GetActor()->GetActorLocation(), FColor::Red, false, 0.3f);
+					//DrawDebugSphere(GetWorld(), AICharacter->GetActorLocation(), AICharacter->GetDetectRadius(), 16, FColor::Blue, false, 1.0f);
 				}
 			}
 		}
@@ -166,7 +167,7 @@ void ATeam_AIController::OnTargetDetect()
 		//UKismetSystemLibrary::PrintString(GetWorld(), FString(iter.GetActor()->GetActorNameOrLabel()), true, false);
 		Blackboard->SetValueAsObject(ATeam_AIController::TargetKey, nullptr);
 		Blackboard->SetValueAsEnum(ATeam_AIController::StateKey, (uint8)ECharacterState::IDLE);
-		DrawDebugSphere(GetWorld(), AICharacter->GetActorLocation(), AICharacter->GetDetectRadius(), 16, FColor::Blue, false, 1.0f);
+		//DrawDebugSphere(GetWorld(), AICharacter->GetActorLocation(), AICharacter->GetDetectRadius(), 16, FColor::Blue, false, 1.0f);
 	}
 }
 
@@ -189,11 +190,23 @@ void ATeam_AIController::OnSensed(const TArray<AActor*>& UpdatedActors)
 			{
 				auto Target = Cast<AActor>(Blackboard->GetValueAsObject(TargetKey));
 				Target = !Target ? actor : (AICharacter->GetDistanceTo(actor) < AICharacter->GetDistanceTo(Target)) ? actor : Target;
+				if (Cast<AGameCharacter>(Target)->IsDead())
+				{
+					Blackboard->SetValueAsObject(TargetKey, nullptr);
+					return;
+				}
 				Blackboard->SetValueAsObject(TargetKey, Target);
 			}
 
 			if (UAISense_Damage::StaticClass() == UAIPerceptionSystem::GetSenseClassForStimulus(GetWorld(), sense))
+			{
+				if (Cast<AGameCharacter>(actor)->IsDead())
+				{
+					Blackboard->SetValueAsObject(TargetKey, nullptr);
+					return;
+				}
 				Blackboard->SetValueAsObject(TargetKey, actor);
+			}
 		}
 	}
 }

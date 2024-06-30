@@ -19,7 +19,9 @@ void ATeam_AICharacter_Range::PostInitializeComponents()
 
 	AnimInstance->OnAttackStart.AddLambda([this]() -> void
 		{
-			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("ProjectileSpawn!")));
+			if (!IsValid(this))
+				return;
+			//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("ProjectileSpawn!")));
 			if (ProjectileClass)
 			{
 				//ActivateParticleSystem(TEXT("Range"));
@@ -66,6 +68,7 @@ void ATeam_AICharacter_Range::PostInitializeComponents()
 		});
 	AnimInstance->OnAttackParticle.AddLambda([this]() -> void
 		{
+			PlayAudioSystemAtLocation(TEXT("Fire"), GetActorLocation());
 			ActivateParticleSystem(TEXT("Range"));
 		});
 }

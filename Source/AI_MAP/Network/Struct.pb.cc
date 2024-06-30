@@ -47,6 +47,7 @@ PROTOBUF_CONSTEXPR ObjectInfo::ObjectInfo(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.pos_info_)*/nullptr
   , /*decltype(_impl_.object_id_)*/uint64_t{0u}
+  , /*decltype(_impl_.spawnidx_)*/uint64_t{0u}
   , /*decltype(_impl_.object_type_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct ObjectInfoDefaultTypeInternal {
@@ -109,6 +110,7 @@ const uint32_t TableStruct_Struct_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(p
   PROTOBUF_FIELD_OFFSET(::Protocol::ObjectInfo, _impl_.object_id_),
   PROTOBUF_FIELD_OFFSET(::Protocol::ObjectInfo, _impl_.object_type_),
   PROTOBUF_FIELD_OFFSET(::Protocol::ObjectInfo, _impl_.pos_info_),
+  PROTOBUF_FIELD_OFFSET(::Protocol::ObjectInfo, _impl_.spawnidx_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::Protocol::ProjectileInfo, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -127,7 +129,7 @@ const uint32_t TableStruct_Struct_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(p
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::Protocol::PosInfo)},
   { 16, -1, -1, sizeof(::Protocol::ObjectInfo)},
-  { 25, -1, -1, sizeof(::Protocol::ProjectileInfo)},
+  { 26, -1, -1, sizeof(::Protocol::ProjectileInfo)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -142,20 +144,20 @@ const char descriptor_table_protodef_Struct_2eproto[] PROTOBUF_SECTION_VARIABLE(
   "\n\001y\030\003 \001(\002\022\t\n\001z\030\004 \001(\002\022\013\n\003yaw\030\005 \001(\002\022\r\n\005pit"
   "ch\030\006 \001(\002\022\014\n\004roll\030\007 \001(\002\022\r\n\005speed\030\010 \001(\002\022\016\n"
   "\006aimYaw\030\t \001(\002\022\"\n\005state\030\n \001(\0162\023.Protocol."
-  "MoveState\"o\n\nObjectInfo\022\021\n\tobject_id\030\001 \001"
-  "(\004\022)\n\013object_type\030\002 \001(\0162\024.Protocol.Objec"
-  "tType\022#\n\010pos_info\030\003 \001(\0132\021.Protocol.PosIn"
-  "fo\"~\n\016ProjectileInfo\022\021\n\tobject_id\030\001 \001(\004\022"
-  "\t\n\001x\030\002 \001(\002\022\t\n\001y\030\003 \001(\002\022\t\n\001z\030\004 \001(\002\022\013\n\003yaw\030"
-  "\005 \001(\002\022\r\n\005pitch\030\006 \001(\002\022\014\n\004roll\030\007 \001(\002\022\016\n\006bF"
-  "ight\030\010 \001(\010b\006proto3"
+  "MoveState\"\201\001\n\nObjectInfo\022\021\n\tobject_id\030\001 "
+  "\001(\004\022)\n\013object_type\030\002 \001(\0162\024.Protocol.Obje"
+  "ctType\022#\n\010pos_info\030\003 \001(\0132\021.Protocol.PosI"
+  "nfo\022\020\n\010spawnIdx\030\004 \001(\004\"~\n\016ProjectileInfo\022"
+  "\021\n\tobject_id\030\001 \001(\004\022\t\n\001x\030\002 \001(\002\022\t\n\001y\030\003 \001(\002"
+  "\022\t\n\001z\030\004 \001(\002\022\013\n\003yaw\030\005 \001(\002\022\r\n\005pitch\030\006 \001(\002\022"
+  "\014\n\004roll\030\007 \001(\002\022\016\n\006bFight\030\010 \001(\010b\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_Struct_2eproto_deps[1] = {
   &::descriptor_table_Enum_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_Struct_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_Struct_2eproto = {
-    false, false, 458, descriptor_table_protodef_Struct_2eproto,
+    false, false, 477, descriptor_table_protodef_Struct_2eproto,
     "Struct.proto",
     &descriptor_table_Struct_2eproto_once, descriptor_table_Struct_2eproto_deps, 1, 3,
     schemas, file_default_instances, TableStruct_Struct_2eproto::offsets,
@@ -695,6 +697,7 @@ ObjectInfo::ObjectInfo(const ObjectInfo& from)
   new (&_impl_) Impl_{
       decltype(_impl_.pos_info_){nullptr}
     , decltype(_impl_.object_id_){}
+    , decltype(_impl_.spawnidx_){}
     , decltype(_impl_.object_type_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
@@ -715,6 +718,7 @@ inline void ObjectInfo::SharedCtor(
   new (&_impl_) Impl_{
       decltype(_impl_.pos_info_){nullptr}
     , decltype(_impl_.object_id_){uint64_t{0u}}
+    , decltype(_impl_.spawnidx_){uint64_t{0u}}
     , decltype(_impl_.object_type_){0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
@@ -785,6 +789,14 @@ const char* ObjectInfo::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
         } else
           goto handle_unusual;
         continue;
+      // uint64 spawnIdx = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
+          _impl_.spawnidx_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -834,6 +846,12 @@ uint8_t* ObjectInfo::_InternalSerialize(
         _Internal::pos_info(this).GetCachedSize(), target, stream);
   }
 
+  // uint64 spawnIdx = 4;
+  if (this->_internal_spawnidx() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(4, this->_internal_spawnidx(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -860,6 +878,11 @@ size_t ObjectInfo::ByteSizeLong() const {
   // uint64 object_id = 1;
   if (this->_internal_object_id() != 0) {
     total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_object_id());
+  }
+
+  // uint64 spawnIdx = 4;
+  if (this->_internal_spawnidx() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_spawnidx());
   }
 
   // .Protocol.ObjectType object_type = 2;
@@ -892,6 +915,9 @@ void ObjectInfo::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PRO
   }
   if (from._internal_object_id() != 0) {
     _this->_internal_set_object_id(from._internal_object_id());
+  }
+  if (from._internal_spawnidx() != 0) {
+    _this->_internal_set_spawnidx(from._internal_spawnidx());
   }
   if (from._internal_object_type() != 0) {
     _this->_internal_set_object_type(from._internal_object_type());

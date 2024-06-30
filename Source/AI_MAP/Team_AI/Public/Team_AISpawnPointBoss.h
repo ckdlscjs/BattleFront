@@ -20,6 +20,7 @@ public:
 	// Sets default values for this actor's properties
 	ATeam_AISpawnPointBoss();
 	virtual void PostInitializeComponents() override;
+	virtual void BeginDestroy() override;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -37,6 +38,5 @@ protected:
 	float MeshDissolveTime;
 	float DissolveTimeCurrent;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-
 	FTimerHandle SpawnTimerHandle;
 };
