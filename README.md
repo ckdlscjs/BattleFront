@@ -1,14 +1,11 @@
 # BattleFront
 UE5.1 TeamProject
 
-!(https://prod-files-secure.s3.us-west-2.amazonaws.com/2c037e11-5d69-451f-8557-93550e6a2b52/16eab047-61d4-47c3-a63f-fe639303e322/Untitled.png)
-
 **역할 및 팀 구성**
-
 - Perforce, AI, Map, Gameflow
-- 개발 인원 : 3인, 팀장
+- 개발 인원 : 3인
 
-![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/2c037e11-5d69-451f-8557-93550e6a2b52/a8e77737-8a87-4df2-a78c-c3ae9b9787fa/Untitled.png)
+[![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/2c037e11-5d69-451f-8557-93550e6a2b52/a8e77737-8a87-4df2-a78c-c3ae9b9787fa/Untitled.png)](https://www.notion.so/image/https%3A%2F%2Fprod-files-secure.s3.us-west-2.amazonaws.com%2F2c037e11-5d69-451f-8557-93550e6a2b52%2F16eab047-61d4-47c3-a63f-fe639303e322%2FUntitled.png?table=block&id=32cc0294-f980-4009-907b-ec2f7faf5a04&spaceId=2c037e11-5d69-451f-8557-93550e6a2b52&width=1920&userId=0ee48131-1446-407f-9acf-28d1729d603b&cache=v2)
 
 ~~📎~~**영상**
 
