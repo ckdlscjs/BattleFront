@@ -8,11 +8,9 @@ UE5.1 TeamProject
 - 개발 인원 : 3인
 
 **영상**
-
 https://youtu.be/uDiQvUdp6hE?si=ac6YNenHf0u3xg1y(TheBattleFront)
 
 **게임**
-
 http://naver.me/xf5U9K8l
 
 ## 🖋️담당 업무
@@ -46,7 +44,6 @@ http://naver.me/xf5U9K8l
 -ABP(AnimInstance)를 통해 애니메이션을 제어하며 AnimMontage를 이용해 특정 상태를 지정.
 
 - **Map**
-
 ![image](https://github.com/ckdlscjs/BattleFront/assets/41976800/8be36fde-659c-4fd3-aedc-bf10f3ba47af)
 -Landscape, BlendMaterial을 이용해 맵기반을 제작, Collision과 Foliage를 이용해 맵 전반의 디테일작업.
 
